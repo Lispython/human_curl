@@ -24,3 +24,4 @@ pip-log.txt
 *.db
 *.db-journal
 *.pid
+*.egg-info*
