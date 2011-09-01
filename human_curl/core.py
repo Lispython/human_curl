@@ -137,8 +137,8 @@ class Request(object):
     def __init__(self, method, url, params=None, data=None, headers=None, cookies=None,
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
                  max_redirects=5, proxies=None, auth=None, network_interface=None, use_gzip=None,
-                 validate_cert=False, ca_certs=None, debug_curl=False, user_agent=None, ip_v6=False):
-        r"""A single HTTP / HTTPS request
+                 validate_cert=False, ca_certs=None, debug=False, user_agent=None, ip_v6=False):
+        """A single HTTP / HTTPS request
 
         Arguments:
         - `url`: (string) resource url
@@ -168,7 +168,7 @@ class Request(object):
         - `use_gzip`: (bool) accept gzipped data
         - `validate_cert`: (bool)
         - `ca_certs`:
-        - `debug_curl`: (bool) use for `pycurl.DEBUGFUNCTION`
+        - `debug`: (bool) use for `pycurl.DEBUGFUNCTION`
         - `user_agent`: (string) user agent
         - `ip_v6`: (bool) use ipv6 protocol
         """
@@ -230,7 +230,7 @@ class Request(object):
         self._validate_cert = validate_cert
         self._ca_certs = ca_certs
         self._start_time = time.time()
-        self._debug_curl = debug_curl
+        self._debug_curl = debug
         self._ip_v6 = ip_v6
 
         self.response = None
@@ -243,7 +243,7 @@ class Request(object):
     def user_agent(self):
         # from curl_requests import get_version
         if self._user_agent is None:
-            self._user_agent = "Mozilla/5.0 (compatible; curl_requests)"
+            self._user_agent = "Mozilla/5.0 (compatible; human_curl; +http://h.wrttn.me/human_curl)"
         return self._user_agent
 
     def _build_url(self):
@@ -387,6 +387,8 @@ class Request(object):
             if proxy_auth:
                 if len(proxy_auth) == 2:
                     opener.setopt(pycurl.PROXYUSERPWD, "%s:%s" % proxy_auth)
+                else:
+                    raise InterfaceError("Proxy auth data must be tuple")
 
         logger.debug("Setup user agent %s" % self.user_agent)
         opener.setopt(pycurl.USERAGENT, self.user_agent)
@@ -471,12 +473,9 @@ class Request(object):
 
                     opener.setopt(pycurl.IOCTLFUNCTION, ioctl)
                     if self._method == "PUT":
-                        logger.debug("Setup INFILESIZE")
                         opener.setopt(pycurl.PUT, True)
                         opener.setopt(pycurl.INFILESIZE, len(self._data))
                     else:
-                        logger.debug("Setup postfieldsize")
-                        #opener.setopt(pycurl.INFILESIZE, len(self._data))
                         opener.setopt(pycurl.POST, True)
                         opener.setopt(pycurl.POSTFIELDSIZE, len(self._data))
                 elif isinstance(self._data, (TupleType, ListType, DictType)):
