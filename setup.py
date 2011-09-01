@@ -77,10 +77,12 @@ def run_tests():
 setup(
     name="human_curl",
     version=".".join(map(str, __version__)),
-    description="Human usage of cURL in python",
+    description="Simple cURL wrapper for Humans",
     long_description=readme_content,
     author="Alex Lispython",
     author_email="alex@obout.ru",
+    maintainer = "Alexandr Lispython",
+    maintainer_email = "alex@obout.ru",
     url="https://github.com/lispython/human_curl",
     packages=["human_curl"],
     install_requires=[
@@ -88,10 +90,15 @@ setup(
         ],
     license="BSD",
 #    test_suite="nose.collector",
+    platforms = ['Linux', 'Mac'],
     classifiers=[
         "Environment :: Web Environment",
         "License :: OSI Approved :: BSD License",
-        "Programming Language :: Python"
+        "Programming Language :: Python",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX",
+        "Topic :: Internet"
+        "Topic :: Software Development :: Libraries"
         ],
     cmdclass={'audit': run_audit},
     test_suite = '__main__.run_tests'

@@ -1,9 +1,13 @@
-# HTTP cURL Requests for Humans
+Welcome to human_curl's documentation!
+======================================
 
 Curl requests for Humans
 
+human_curl allow you to send  **HEAD**, **GET**, **POST**, **PUT**,
+**PATCH**, and **DELETE** HTTP requests.
 
-## Features:
+Features
+--------
 
 - Custom HTTP headers
 - Request data/params
@@ -19,9 +23,11 @@ Curl requests for Humans
 - ipv6 support
 
 
-## USAGE
+Usage
+-----
 
-### Simple get request
+
+**Simple get request**
 
     >>> import human_curl as requests # python-requests.org compatibile
     >>> r = requests.get('http://h.wrttn.me/basic-auth/test_username/test_password', auth=('test_username', 'test_password'))
@@ -31,17 +37,17 @@ Curl requests for Humans
     '{"username": "test_username", "password": "test_password", "authenticated": true}'
 
 
-### Send files and variables
+**Send files and variables**
 
     >>> import human_curl as requests
-    >>> r = requests.post('http://h.wrttn.me', files=(('file_1', '/tmp/testfile1.txt'),
-    ... ('file2', open('/tmp/testfile2.txt'))), data={'var\_name': 'var\_value'})
+    >>> r = requests.post('http://h.wrttn.me/post', files=(('file_1', '/tmp/testfile1.txt'),
+    ... ('file2', open('/tmp/testfile2.txt'))), data={'var_name': 'var_value'})
 	...
     >>> r.status_code
     201
 
 
-### Redirects
+**Redirects**
 
     >>> import human_curl as requests
     >>> r = requests.get('http://h.wrttn.me/redirect/4', allow_redirects=True)
@@ -53,15 +59,18 @@ Curl requests for Humans
 	http://h.wrttn.me/redirect/end
 
 
-## TODO
+
+TODO
+----
 
 - async client
 - curl command generation?
 
 
-## INSTALLATION
+INSTALLATION
+------------
 
-To use human\_curl  use pip or easy\_install:
+To use human_curl  use pip or easy_install:
 
 `pip install human_curl`
 
@@ -70,6 +79,9 @@ or
 `easy_install human_curl`
 
 
-## CONTRIBUTE
+CONTRIBUTE
+----------
+
 Fork https://github.com/Lispython/human_curl/ , create commit, create pull request.
+
 
