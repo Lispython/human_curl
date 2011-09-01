@@ -7,7 +7,10 @@ shell:
 	../venv/bin/ipython
 
 audit:
-	../venv/bin/python audit
+	python setup.py autdit
+
+release:
+	python setup.py sdist upload
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +

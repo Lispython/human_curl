@@ -4,7 +4,7 @@ Welcome to human_curl's documentation!
 Curl requests for Humans
 
 human_curl allow you to send  **HEAD**, **GET**, **POST**, **PUT**,
-**PATCH**, and **DELETE** HTTP requests.
+**OPTIONS**, and **DELETE** HTTP requests.
 
 Features
 --------
@@ -30,6 +30,7 @@ Usage
 **Simple get request**
 
     >>> import human_curl as requests # python-requests.org compatibile
+    >>> # import human_curl as hurl # unfortunately hulr.it keep this name :-)
     >>> r = requests.get('http://h.wrttn.me/basic-auth/test_username/test_password', auth=('test_username', 'test_password'))
     >>> r.status_code
     200
@@ -82,4 +83,14 @@ or
 CONTRIBUTE
 ----------
 
-Fork https://github.com/Lispython/human_curl/ , create commit, create pull request.
+Fork https://github.com/Lispython/human_curl/ , create commit and pull request.
+
+
+SEE ALSO
+--------
+
+If you don't like cURL (why?), try to use `python-requests`_.
+
+.. _`python-requests`: http://python-requests.org
+
+

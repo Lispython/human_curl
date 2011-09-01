@@ -174,10 +174,10 @@ class Request(object):
         """
         self._url = url
         if not method or not isinstance(method, StringTypes):
-            raise RuntimeError("method argument must be string")
+            raise InterfaceError("method argument must be string")
 
         if method.upper() not in self.SUPPORTED_METHODS:
-            raise InvalidMethod("cURL do not support %s method" % self._method)
+            raise InvalidMethod("cURL do not support %s method" % method.upper())
 
         self._method = method.upper()
 

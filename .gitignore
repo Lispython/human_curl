@@ -14,11 +14,8 @@ config
 .#*
 .rope*
 venv
-local_settings.py
-local_settings.pyc
 debug.log
 pip-log.txt
-*.rdb
 *.log
 *.err
 *.db
