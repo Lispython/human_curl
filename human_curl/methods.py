@@ -58,7 +58,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     """
     args = dict(
         method=method, url=url, params=params, data=data, headers=headers, cookies=cookies,
-        files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=5, proxies=proxies,
+        files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=max_redirects, proxies=proxies,
         auth=auth, network_interface=network_interface, use_gzip=use_gzip, validate_cert=validate_cert,
         ca_certs=ca_certs, debug_curl=debug_curl, user_agent=user_agent, ip_v6=ip_v6)
 
