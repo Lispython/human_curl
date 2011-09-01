@@ -154,7 +154,7 @@ class RequestsTestCase(unittest.TestCase):
 
     def test_FILES(self):
         files = {'test_file': open('tests.py'),
-                 'test_file2': open('README.md')}
+                 'test_file2': open('README.rst')}
         r = requests.post(build_url('post'),
                           files=files)
         json_response = json.loads(r.content)
@@ -164,7 +164,7 @@ class RequestsTestCase(unittest.TestCase):
 
     def test_POST_DATA_and_FILES(self):
         files = {'test_file': open('tests.py'),
-               'test_file2': open('README.md')}
+               'test_file2': open('README.rst')}
         random_key1 = "key_" + uuid.uuid4().get_hex()[:10]
         random_value1 = "value_" + uuid.uuid4().get_hex()
         random_key2 = "key_" + uuid.uuid4().get_hex()[:10]
@@ -178,7 +178,7 @@ class RequestsTestCase(unittest.TestCase):
 
     def test_PUT_DATA_and_FILES(self):
         files = {'test_file': open('tests.py'),
-                 'test_file2': open('README.md')}
+                 'test_file2': open('README.rst')}
         random_key1 = "key_" + uuid.uuid4().get_hex()[:10]
         random_key2 = "key_" + uuid.uuid4().get_hex()[:10]
         random_value2 = "value_" + uuid.uuid4().get_hex()
@@ -416,9 +416,9 @@ class UtilsTestCase(unittest.TestCase):
             self.assertTrue(v in tmp)
 
     def test_curl_post_files(self):
-        test_files = (('field_file_name', './README.md'),
+        test_files = (('field_file_name', './README.rst'),
                       ('field_file_name2', open('./setup.py')),
-                      ('multiple_files_field', (open("./README.md"), "./setup.py")))
+                      ('multiple_files_field', (open("./README.rst"), "./setup.py")))
 
         curl_files_dict = make_curl_post_files(test_files)
 
