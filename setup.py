@@ -25,9 +25,10 @@ __version__ = (0, 0, 1)
 
 
 try:
-    readme_content = open(sys.path.join(sys.apth.abspath(
-        sys.path.dirname(__file__)), "README.md")).read()
+    readme_content = open(os.path.join(os.path.abspath(
+        os.path.dirname(__file__)), "README.rst")).read()
 except Exception, e:
+    print(e)
     readme_content = __doc__
 
 
