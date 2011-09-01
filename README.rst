@@ -83,5 +83,3 @@ CONTRIBUTE
 ----------
 
 Fork https://github.com/Lispython/human_curl/ , create commit, create pull request.
-
-

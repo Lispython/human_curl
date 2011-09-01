@@ -1,0 +1,10 @@
+include *.txt *.md *.rst Makefile
+recursive-include docs *.txt *.py *.rst *.md
+recursive-include docs *
+ecursive-exclude docs *.pyc
+recursive-exclude docs *.pyo
+recursive-exclude tests *.pyc
+recursive-exclude tests *.pyo
+recursive-exclude examples *.pyc
+recursive-exclude examples *.pyo
+
