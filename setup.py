@@ -97,7 +97,7 @@ setup(
         "Programming Language :: Python",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX",
-        "Topic :: Internet"
+        "Topic :: Internet",
         "Topic :: Software Development :: Libraries"
         ],
     cmdclass={'audit': run_audit},
