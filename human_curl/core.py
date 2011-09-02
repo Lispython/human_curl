@@ -126,8 +126,7 @@ class Request(object):
 
     >>> request = Request("GET", "http://google.com")
     >>> print(repr(request))
-    ... <Request: GET [ http://google.com ]>
-    ...
+    <Request: GET [ http://google.com ]>
     >>> request.send()
     >>> response = requests.response
     """
@@ -433,7 +432,8 @@ class Request(object):
                 name = urllib.quote_plus(name)
                 value = urllib.quote_plus(value)
                 chunks.append('%s=%s;' % (name, value))
-            opener.setopt(pycurl.COOKIE, ''.join(chunks))
+            if chunks:
+                opener.setopt(pycurl.COOKIE, ''.join(chunks))
         else:
             # set empty cookie to activate cURL cookies
             opener.setopt(pycurl.COOKIELIST, '')
@@ -531,7 +531,7 @@ class Response(object):
 
         # Cookies dictionary
         self._cookies = None
-        self._cookies_jar = cookies_jar
+        self._cookies_jar = cookies_jar or CookieJar()
 
         # Seconds from request start to finish
         self.request_time = None
@@ -678,6 +678,7 @@ class Response(object):
                     cookie = SimpleCookie()
                     cookie.load(value)
                     cookies.extend(cookie.values())
+
                     # update cookie jar
                     for morsel in cookie.values():
                         if isinstance(self._cookies_jar, CookieJar):
