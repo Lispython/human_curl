@@ -22,7 +22,8 @@ from string import capwords
 from urllib import urlencode
 from cookielib import CookieJar
 from urlparse import urlparse, urljoin, urlunparse
-from types import (StringTypes, TupleType, DictType, NoneType, ListType)
+from types import (StringTypes, TupleType, DictType, NoneType,
+                   ListType, FunctionType)
 
 import pycurl
 
@@ -38,7 +39,6 @@ except ImportError:
 
 try:
     import signal
-    from signal import SIGPIPE, SIG_IGN
     signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except ImportError:
     pass
@@ -355,9 +355,15 @@ class Request(object):
             opener.setopt(pycurl.CONNECTTIMEOUT, self._connection_timeout)
 
         # Setup debug output write function
-        if self._debug_curl is True:
+        if isinstance(self._debug_curl, FunctionType):
+            logger.debug("Setup %s as debug function" % self._debug_curl.__name__)
+            opener.setopt(pycurl.VERBOSE, 1)
+            opener.setopt(pycurl.DEBUGFUNCTION, self._debug_curl)
+        elif self._debug_curl is True:
             opener.setopt(pycurl.VERBOSE, 1)
             opener.setopt(pycurl.DEBUGFUNCTION, _debug_curl)
+        else:
+            opener.setopt(pycurl.VERBOSE, 0)
 
         # Send allow gzip encoding header
         if self._use_gzip is not None:
@@ -587,7 +593,7 @@ class Response(object):
         return self._status_code
 
     @property
-    def cookiejar(self):
+    def cookiesjar(self):
         """Returns cookie jar object
         """
         if not self._cookies_jar:
@@ -708,6 +714,11 @@ class Response(object):
 
 
 def _debug_curl(debug_type, debug_msg):
+    """Handle debug messages
+
+    - `debug_type`: (int) debug output code
+    - `debug_msg`: (str) debug message
+    """
     debug_types = ('I', '<', '>', '<', '>')
     if debug_type == 0:
         logger.debug('%s', debug_msg.strip())
