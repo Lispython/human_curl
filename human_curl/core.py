@@ -136,7 +136,7 @@ class Request(object):
     def __init__(self, method, url, params=None, data=None, headers=None, cookies=None,
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
                  max_redirects=5, proxies=None, auth=None, network_interface=None, use_gzip=None,
-                 validate_cert=False, ca_certs=None, debug=False, user_agent=None, ip_v6=False):
+                 validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None, ip_v6=False, **kwargs):
         """A single HTTP / HTTPS request
 
         Arguments:
@@ -163,10 +163,13 @@ class Request(object):
                (('http', ('127.0.0.1', 9050)),
                 ('socks', ('127.0.0.1', 9050, ('username', 'password')))
         - `auth`: (dict, tuple or list) for resource base auth
-        - `network_interface`: (str) use given interface for request
+        - `network_interface`: (str) Pepform an operation using a specified interface.
+           You can enter interface name, IP address or host name.
         - `use_gzip`: (bool) accept gzipped data
         - `validate_cert`: (bool)
-        - `ca_certs`:
+        - `ca_certs`: tells curl to use the specified certificate file to verify the peer.
+        - `cert`: (string) tells curl to use the specified certificate file
+           when getting a file with HTTPS.
         - `debug`: (bool) use for `pycurl.DEBUGFUNCTION`
         - `user_agent`: (string) user agent
         - `ip_v6`: (bool) use ipv6 protocol
@@ -226,8 +229,11 @@ class Request(object):
         self._connection_timeout = connection_timeout
 
         self._use_gzip = use_gzip
+
+        # Certificates
         self._validate_cert = validate_cert
         self._ca_certs = ca_certs
+        self._cert = None
         self._start_time = time.time()
         self._debug_curl = debug
         self._ip_v6 = ip_v6
@@ -411,6 +417,15 @@ class Request(object):
             logger.debug("Use ca cert %s" % self._ca_certs)
             if file_exists(self._ca_certs):
                 opener.setopt(pycurl.CAINFO, self._ca_certs)
+
+        ## (HTTPS) Tells curl to use the specified certificate file when getting a
+        ## file with HTTPS. The certificate must be in PEM format.
+        ## If the optional password isn't specified, it will be queried for on the terminal.
+        ## Note that this certificate is the private key and the private certificate concatenated!
+        ## If this option is used several times, the last one will be used.
+        if self._cert:
+            opener.setopt(pycurl.SSLCERT, self._cert)
+
 
         if self._ip_v6:
             opener.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
