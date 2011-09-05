@@ -26,7 +26,7 @@ from types import (StringTypes, TupleType, DictType, NoneType,
                    ListType, FunctionType)
 
 import pycurl
-
+from .auth import AuthManager, BasicAuth, DigestAuth
 from .exceptions import (HTTPError, InvalidMethod, CurlError, InterfaceError)
 from .utils import (decode_gzip, CaseInsensitiveDict, to_cookiejar,
                    morsel_to_cookie, data_wrapper, make_curl_post_files, utf8, to_unicode)
@@ -200,7 +200,9 @@ class Request(object):
         else:
             self._data = data_wrapper(data)
 
-        if isinstance(cookies, (TupleType, DictType, CookieJar)):
+        if isinstance(cookies, CookieJar):
+            self._cookies = cookies
+        elif isinstance(cookies, (TupleType, DictType)):
             self._cookies = to_cookiejar(cookies)
         else:
             self._cookies = None
@@ -212,10 +214,10 @@ class Request(object):
 
         self._network_interface = network_interface
 
-        if isinstance(auth, DictType):
+        if isinstance(auth, AuthManager):
             self._auth = auth
         elif isinstance(auth, TupleType):
-            self._auth = dict(username=auth[0], password=auth[1])
+            self._auth = BasicAuth(*auth)
         elif auth is None:
             self._auth = None
         else:
@@ -303,8 +305,10 @@ class Request(object):
         except pycurl.error, e:
             raise CurlError(e[0], e[1])
         else:
-            self.response = Response(url=self._url, curl_opener=opener, body_output=body_output,
-                                     headers_output=headers_output, request=self, cookies_jar=self._cookies)
+            self.response = Response(url=self._url, curl_opener=opener,
+                                     body_output=body_output,
+                                     headers_output=headers_output, request=self,
+                                     cookies=self._cookies)
 
         return self.response
 
@@ -506,12 +510,8 @@ class Request(object):
                     # use postfields to send vars as application/x-www-form-urlencoded
                     # opener.setopt(pycurl.POSTFIELDS, encoded_data)
 
-        if self._auth is not None:
-            logger.debug("Use %s for auth" % self._auth)
-            if self._auth['username'] and self._auth['password']:
-                opener.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_BASIC)
-                opener.setopt(pycurl.USERPWD, "%s:%s" % (self._auth['username'],
-                                                         self._auth['password']))
+        if isinstance(self._auth, AuthManager):
+            self._auth.setup(opener)
         else:
             opener.unsetopt(pycurl.USERPWD)
 
@@ -523,7 +523,7 @@ class Response(object):
     """
 
     def __init__(self, url, curl_opener, body_output, headers_output,
-                 request=None, cookies_jar=None):
+                 request=None, cookies=None):
         """
         Arguments:
         - `url`: resource url
@@ -546,7 +546,12 @@ class Response(object):
 
         # Cookies dictionary
         self._cookies = None
-        self._cookies_jar = cookies_jar or CookieJar()
+        if isinstance(cookies, CookieJar):
+            self._cookies_jar = cookies
+        elif isinstance(cookies, (TupleType, DictType)):
+            self._cookies_jar = to_cookiejar(cookies)
+        else:
+            self._cookies_jar = None
 
         # Seconds from request start to finish
         self.request_time = None
@@ -622,7 +627,8 @@ class Response(object):
         """
         import zlib
         if not self._content:
-            if 'gzip' in self.headers.get('Content-Encoding', ''):
+            if 'gzip' in self.headers.get('Content-Encoding', '') and \
+                   'zlib' not in pycurl.version:
                 try:
                     self._content = decode_gzip(self._body_otput.getvalue())
                 except zlib.error:

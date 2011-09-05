@@ -21,6 +21,8 @@ Features
 - Request timers and another info
 - Certificate validation
 - ipv6 support
+- Basic/Digest authentication
+- Debug request and response headers handler
 
 
 Usage

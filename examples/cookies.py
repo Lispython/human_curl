@@ -20,7 +20,6 @@ r1 = hurl.get("http://www.google.com",
               debug=stdout_debug, allow_redirects=True)
 
 print(r1.cookiesjar)
-print(r1.content)
 r2 = hurl.get("http://h.wrttn.me/cookies/set/llllll/adkbhahjsbhjwbf",
               debug=stdout_debug, cookies=r1.cookiesjar)
 assert r1.cookiesjar == r2.cookiesjar

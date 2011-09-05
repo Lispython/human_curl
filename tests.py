@@ -30,6 +30,7 @@ except ImportError:
 
 import human_curl as requests
 from human_curl import Request, Response
+from human_curl.auth import BasicAuth, DigestAuth
 from human_curl.utils import (from_cookiejar, decode_gzip, CaseInsensitiveDict,
                               to_cookiejar, morsel_to_cookie, data_wrapper,
                               make_curl_post_files)
@@ -53,6 +54,23 @@ HTTPS_TEST_URL = "https://h.wrttn.me"
 
 def build_url(*parts):
     return urljoin(HTTP_TEST_URL, "/".join(parts))
+
+def build_url_secure(*parts):
+    return urljoin(HTTPS_TEST_URL, "/".join(parts))
+
+TEST_SERVERS = (build_url, build_url_secure)
+
+def stdout_debug(debug_type, debug_msg):
+    """Print messages
+    """
+    debug_types = ('I', '<', '>', '<', '>')
+    if debug_type == 0:
+        print('%s' % debug_msg.strip())
+    elif debug_type in (1, 2):
+        for line in debug_msg.splitlines():
+            print('%s %s' % (debug_types[debug_type], line))
+    elif debug_type == 4:
+        print('%s %r' % (debug_types[debug_type], debug_msg))
 
 
 class RequestsTestCase(unittest.TestCase):
@@ -189,7 +207,7 @@ class RequestsTestCase(unittest.TestCase):
 
         self.assertEquals(r.status_code, 200)
 
-    def test_cookie_jar(self):
+    def test_cookies_jar(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
         random_value = "value_" + uuid.uuid4().get_hex()
         random_key2 = "key_" + uuid.uuid4().get_hex()[:10]
@@ -200,9 +218,9 @@ class RequestsTestCase(unittest.TestCase):
 
         cookies_jar = cookielib.CookieJar()
 
-        requests.get(build_url("cookies", "set", random_key, random_value),
+        r1 = requests.get(build_url("cookies", "set", random_key, random_value),
                      cookies=cookies_jar)
-        #self.assertEquals(r.cookies[random_key].value, random_value)
+        self.assertEquals(r1.cookies[random_key], random_value)
         requests.get(build_url("cookies", "set", random_key2, random_value2),
                      cookies=cookies_jar)
         for cookie in cookies_jar:
@@ -212,19 +230,50 @@ class RequestsTestCase(unittest.TestCase):
         r3 = requests.get(build_url('cookies'), cookies=cookies_jar)
         json_response = json.loads(r3.content)
         for k, v in cookies:
-            self.assertTrue(json_response[k], v)
+            self.assertEquals(json_response[k], v)
 
     def test_send_cookies(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
         random_value = "value_" + uuid.uuid4().get_hex()
+        random_key2 = "key_" + uuid.uuid4().get_hex()[:10]
+        random_value2 = "value_" + uuid.uuid4().get_hex()
 
-    def test_auth(self):
-        username = "test_username"
-        password = "test_password"
-        http_auth = (username, password)
+        cookies = ((random_key, random_value),
+                   (random_key2, random_value2))
 
-        r = requests.get(build_url('basic-auth', username, password), auth=http_auth)
+        r = requests.get(build_url('cookies'), cookies=cookies)
+        #                          debug=stdout_debug)
+        json_response = json.loads(r.content)
+        self.assertEquals(json_response[random_key], random_value)
+
+
+    def test_basic_auth(self):
+        username =  uuid.uuid4().get_hex()
+        password =  uuid.uuid4().get_hex()
+        auth_manager = BasicAuth(username, password)
+
+        r = requests.get(build_url('basic-auth', username, password),
+                         auth=auth_manager)
         self.assertEquals(r.status_code, 200)
+        json_response = json.loads(r.content)
+        self.assertEquals(json_response['password'], password)
+        self.assertEquals(json_response['username'], username)
+        self.assertEquals(json_response['auth-type'], 'basic')
+
+
+    def test_digest_auth(self):
+        username = uuid.uuid4().get_hex()
+        password =  uuid.uuid4().get_hex()
+        auth_manager = DigestAuth(username, password)
+
+        r = requests.get(build_url('digest-auth/auth/', username, password),
+                         auth=auth_manager, allow_redirects=True)
+        self.assertEquals(r.status_code, 200)
+        json_response = json.loads(r.content)
+        self.assertEquals(json_response['password'], password)
+        self.assertEquals(json_response['username'], username)
+        self.assertEquals(json_response['auth-type'], 'digest')
+
 
     def test_auth_denied(self):
         username = "hacker_username"
@@ -271,6 +320,8 @@ class RequestsTestCase(unittest.TestCase):
     def test_gzip(self):
         r = requests.get(build_url("gzip"), use_gzip=True)
         self.assertEquals(r.headers['Content-Encoding'], 'gzip')
+        json_response = json.loads(r.content)
+        self.assertEquals(json_response['gzipped'], True)
 
     def test_response_info(self):
         r = requests.get(build_url("get"))
