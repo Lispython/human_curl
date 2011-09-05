@@ -662,6 +662,8 @@ class Response(object):
                         if not value.startswith("http"):
                             value = urljoin(self.url, value)
                         self._history.append(value)
+                    if value[:1] == value[-1:] == '"':
+                        value = value[1:-1] # strip "
                     block_headers.append((field, value.strip()))
                 elif header.startswith("HTTP"):
                     # extract version, code, message from first header
