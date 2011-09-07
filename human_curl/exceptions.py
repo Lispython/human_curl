@@ -30,7 +30,6 @@ class InvalidMethod(Exception):
     """Exception raise if `Request.__init__()` get unsupported method
     """
 
-
 class CurlError(Exception):
     """Exception raise when `pycurl.Curl` raise connection errors
     """
@@ -44,3 +43,7 @@ class InterfaceError(Exception):
     or not allowed parameter
     """
 
+
+class AuthError(Exception):
+    """Raised by auth manager
+    """

@@ -3,6 +3,11 @@ all: clean-pyc test
 test:
 	python setup.py nosetests --stop --tests tests.py
 
+
+coverage:
+	python setup.py nosetests  --with-coverage --cover-package=human_curl --cover-html --cover-html-dir=coverage_out coverage
+
+
 shell:
 	../venv/bin/ipython
 

@@ -2,7 +2,7 @@
 # -*- coding:  utf-8 -*-
 
 import human_curl as hurl
-from human_curl.auth import BasicAuth, DigestAuth
+from human_curl.auth import BasicAuth, DigestAuth, OAuth
 
 def stdout_debug(debug_type, debug_msg):
     """Print messages
@@ -32,7 +32,11 @@ r3 = hurl.get("https://h.wrttn.me/basic-auth/username/password",
 
 print(r3)
 
-r4 = hurl.get("http://h.wrttn.me/digest-auth/auth/username/password",
-              debug=stdout_debug, allow_redirects=False,
-              auth=DigestAuth("username", "password"))
+
+
+r4 = hurl.get("http://127.0.0.1:5000/digest-auth/auth/username/password",
+             debug=stdout_debug, allow_redirects=False,
+             auth=DigestAuth("username", "password"))
 print(r4)
+
+

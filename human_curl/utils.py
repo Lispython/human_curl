@@ -12,7 +12,11 @@ Utils module of cURL for Humans
 
 import zlib
 import time
+import urllib
+import urlparse
 import pycurl
+import random
+from urllib2 import parse_http_list
 from urllib import quote_plus
 from Cookie import Morsel
 from os.path import exists as file_exists
@@ -24,15 +28,26 @@ try:
 except Exception:
     bytes = str
 
+try:
+    from urlparse import parse_qs
+    parse_qs # placate pyflakes
+except ImportError:
+    # fall back for Python 2.5
+    from cgi import parse_qs
+
 from .exceptions import InterfaceError
 
 __all__ = ('decode_gzip', 'CaseInsensitiveDict', 'from_cookiejar', 'to_cookiejar',
            'morsel_to_cookie', 'data_wrapper', 'make_curl_post_files', 'url_escape',
-           'utf8', 'to_unicode')
+           'utf8', 'to_unicode', 'parse_authenticate_header', 'parse_authorization_header',
+           'WWWAuthenticate', 'Authorization', 'parse_dict_header', 'generate_nonce',
+           'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters', 'parse_qs')
 
 def url_escape(value):
     """Returns a valid URL-encoded version of the given value."""
-    return quote_plus(utf8(value))
+    """Escape a URL including any /."""
+    return urllib.quote(value.encode('utf-8'), safe='~')
+#    return quote_plus(utf8(value))
 
 _UTF8_TYPES = (bytes, type(None))
 def utf8(value):
@@ -44,7 +59,7 @@ def utf8(value):
     if isinstance(value, _UTF8_TYPES):
         return value
     assert isinstance(value, unicode)
-    return value.encode("utf-8")
+    return to_unicode(value).encode("utf-8")
 
 _TO_UNICODE_TYPES = (unicode, type(None))
 def to_unicode(value):
@@ -57,7 +72,6 @@ def to_unicode(value):
         return value
     assert isinstance(value, bytes)
     return value.decode("utf-8")
-
 
 
 def decode_gzip(content):
@@ -290,3 +304,205 @@ def make_curl_post_files(data):
             raise InterfaceError("Not allowed file value")
 
     return result
+
+
+
+def parse_dict_header(value):
+    """Parse key=value pairs from value list
+    """
+    result = {}
+    for item in parse_http_list(value):
+        if "=" not in item:
+            result[item] = None
+            continue
+        name, value = item.split('=', 1)
+        if value[:1] == value[-1:] == '"':
+            value = urllib.unquote(value[1:-1]) # strip " and unquote
+        result[name] = value
+    return result
+
+
+def generate_timestamp():
+    """Get seconds since epoch (UTC)."""
+    return int(time.time())
+
+
+def generate_nonce(length=8):
+    """Generate pseudorandom number."""
+    return ''.join([str(random.randint(0, 9)) for i in range(length)])
+
+
+def generate_verifier(length=8):
+    """Generate pseudorandom number."""
+    return ''.join([str(random.randint(0, 9)) for i in range(length)])
+
+def parse_authenticate_header(header):
+    """Parse WWW-Authenticate response header
+
+    WWW-Authenticate: Digest
+                 realm="testrealm@host.com",
+                 qop="auth,auth-int",
+                 nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+                 opaque="5ccc069c403ebaf9f0171e9517f40e41"
+    """
+    if not header:
+        return
+    try:
+        auth_type, auth_info = header.split(None, 1)
+        auth_type = auth_type.lower()
+    except ValueError, e:
+        print(e)
+        return
+    return WWWAuthenticate(auth_type, parse_dict_header(auth_info))
+
+
+def parse_authorization_header(header):
+    """Parse authorization header and build Authorization object
+    """
+    if not header:
+        return
+    try:
+        auth_type, auth_info = header.split(None, 1) # separate auth type and values
+        auth_type = auth_type.lower()
+    except ValueError, e:
+        print(e)
+        return
+
+    if auth_type == 'basic':
+        try:
+            username, password = auth_info.decode('base64').split(':', 1)
+        except Exception, e:
+            return
+        return Authorization('basic', {'username': username,
+                                       'password': password})
+    elif auth_type == 'digest':
+        auth_map = parse_dict_header(auth_info)
+
+        required_map = {
+            'auth': ("username", "realm", "nonce", "uri", "response", "opaque"),
+            'auth-int': ("realm", "nonce", "uri", "qop", "nc", "cnonce", "response", "opaque")}
+        required = required_map.get(auth_map.get('qop', 'auth'))
+
+        for key in required:
+            if not key in auth_map:
+                return
+        return Authorization('digest', auth_map)
+    elif auth_type == 'oauth':
+        auth_map = parse_dict_header(auth_info)
+        return Authorization('oauth', auth_map)
+    else:
+        raise ValueError("Unknown auth type %s" % auth_type)
+
+
+class WWWAuthenticate(dict):
+    """WWWAuthenticate header object
+    """
+
+    AUTH_TYPES = ("Digest", "Basic", "OAuth")
+
+    def __init__(self, auth_type='basic', data=None):
+        if auth_type.lower() not in [t.lower() for t in self.AUTH_TYPES]:
+            raise RuntimeError("Unsupported auth type: %s" % auth_type)
+        dict.__init__(self, data or {})
+        self._auth_type = auth_type
+
+    @staticmethod
+    def from_string(value):
+        """Build Authenticate object from header value
+
+        - `value`: Authorization field value
+        """
+        return parse_authenticate_header(value)
+
+    def to_header(self):
+        """Convert values into WWW-Authenticate header value
+        """
+        d = dict(self)
+        return "%s %s" % (self._auth_type.title(), ", ".join("%s=\"%s\"" % (k, v)
+                                                             for k, v in d.iteritems()))
+
+
+class Authorization(dict):
+    """Authorization header object
+    """
+
+    AUTH_TYPES = ("Digest", "Basic", "OAuth")
+
+    def __init__(self, auth_type='basic', data=None):
+        if auth_type.lower() not in [t.lower() for t in self.AUTH_TYPES]:
+            raise RuntimeError("Unsupported auth type: %s" % auth_type)
+        dict.__init__(self, data or {})
+        self._auth_type = auth_type
+
+    def __str__(self):
+        return self.to_header()
+
+    @staticmethod
+    def from_string(value):
+        """Build Authorization object from header value
+
+        - `value`: Authorization field value
+        """
+        return parse_authorization_header(value)
+
+    def to_header(self):
+        """Convert values into WWW-Authenticate header value
+        """
+        d = dict(self)
+        return "%s %s" % (self._auth_type.title(), ", ".join("%s=\"%s\"" % (k, v)
+                                                             for k, v in d.iteritems()))
+
+
+    # Digest auth properties http://tools.ietf.org/html/rfc2069#page-4
+
+    realm = property(lambda x: x.get('realm'), doc="""
+    A string to be displayed to users so they know which username and
+    password to use.""")
+
+    domain = property(lambda x: x.get('domain'), doc="""domain
+    A comma-separated list of URIs, as specified for HTTP/1.0.""")
+
+
+
+
+def normalize_url(url):
+    if url is not None:
+        scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+
+        # Exclude default port numbers.
+        if scheme == 'http' and netloc[-3:] == ':80':
+            netloc = netloc[:-3]
+        elif scheme == 'https' and netloc[-4:] == ':443':
+            netloc = netloc[:-4]
+        if scheme not in ('http', 'https'):
+            raise ValueError("Unsupported URL %s (%s)." % (url, scheme))
+
+        # Normalized URL excludes params, query, and fragment.
+        return  urlparse.urlunparse((scheme, netloc, path, None, None, None))
+    else:
+        return None
+
+
+def normalize_parameters(url):
+    """Normalize url parameters
+
+    The parameters collected in Section 3.4.1.3 are normalized into a
+    single string as follow: http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
+    """
+    items = []
+    # Include any query string parameters from the provided URL
+    query = urlparse.urlparse(url)[4]
+    parameters = parse_qs(utf8(query), keep_blank_values=True)
+    for k, v in parameters.iteritems():
+        parameters[k] = urllib.unquote(v[0])
+    url_items = parameters.items()
+    url_items = [(utf8(k), utf8(v)) for k, v in url_items if k != 'oauth_signature' ]
+    items.extend(url_items)
+
+    items.sort()
+    encoded_str = urllib.urlencode(items)
+    # Encode signature parameters per Oauth Core 1.0 protocol
+    # spec draft 7, section 3.6
+    # (http://tools.ietf.org/html/draft-hammer-oauth-07#section-3.6)
+    # Spaces must be encoded with "%20" instead of "+"
+    return encoded_str.replace('+', '%20').replace('%7E', '~')

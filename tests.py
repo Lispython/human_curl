@@ -21,6 +21,7 @@ import uuid
 import logging
 from urlparse import urljoin
 import unittest
+import urllib
 from types import TupleType, StringTypes, ListType
 from urllib import urlencode
 try:
@@ -30,12 +31,10 @@ except ImportError:
 
 import human_curl as requests
 from human_curl import Request, Response
-from human_curl.auth import BasicAuth, DigestAuth
-from human_curl.utils import (from_cookiejar, decode_gzip, CaseInsensitiveDict,
-                              to_cookiejar, morsel_to_cookie, data_wrapper,
-                              make_curl_post_files)
+from human_curl.auth import *
+from human_curl.utils import *
 
-from human_curl.exceptions import CurlError, InterfaceError, InvalidMethod
+from human_curl.exceptions import (CurlError, InterfaceError, InvalidMethod, AuthError)
 
 logger = logging.getLogger("human_curl")
 
@@ -482,12 +481,227 @@ class UtilsTestCase(unittest.TestCase):
                 assert False
 
 
+class AuthManagersTestCase(unittest.TestCase):
+
+
+    def test_parse_dict_header(self):
+        value = '''username="Mufasa",
+                 realm="testrealm@host.com",
+                 nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+                 uri="/dir/index.html",
+                 qop=auth,
+                 nc=00000001,
+                 cnonce="0a4f113b",
+                 response="6629fae49393a05397450978507c4ef1",
+                 opaque="5ccc069c403ebaf9f0171e9517f40e41"'''
+
+        parsed_header = parse_dict_header(value)
+        self.assertEquals(parsed_header['username'], "Mufasa")
+        self.assertEquals(parsed_header['realm'], "testrealm@host.com")
+        self.assertEquals(parsed_header['nonce'], "dcd98b7102dd2f0e8b11d0f600bfb0c093")
+        self.assertEquals(parsed_header['uri'], "/dir/index.html")
+        self.assertEquals(parsed_header['qop'], "auth")
+        self.assertEquals(parsed_header['nc'], "00000001")
+
+
+    def test_parse_authorization_header(self):
+        test_digest_value = '''Digest username="Mufasa",
+        realm="testrealm@host.com",
+        nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+        uri="/dir/index.html",
+        qop=auth,
+        nc=00000001,
+        cnonce="0a4f113b",
+        response="6629fae49393a05397450978507c4ef1",
+        opaque="5ccc069c403ebaf9f0171e9517f40e41"'''
+
+        digest_authorization = parse_authorization_header(test_digest_value)
+
+        control_dict = {'username': 'Mufasa',
+                        'nonce': 'dcd98b7102dd2f0e8b11d0f600bfb0c093',
+                        'realm': 'testrealm@host.com',
+                        'qop': 'auth',
+                        'cnonce': '0a4f113b',
+                        'nc': '00000001',
+                        'opaque': '5ccc069c403ebaf9f0171e9517f40e41',
+                        'uri': '/dir/index.html',
+                        'response': '6629fae49393a05397450978507c4ef1'}
+
+        for k, v in control_dict.iteritems():
+            self.assertEquals(digest_authorization[k], v)
+
+        self.assertTrue(isinstance(digest_authorization, Authorization))
+
+        test_oauth_header_value = '''OAuth realm="Photos",
+        oauth_consumer_key="dpf43f3p2l4k3l03",
+        oauth_signature_method="HMAC-SHA1",
+        oauth_timestamp="137131200",
+        oauth_nonce="wIjqoS",
+        oauth_callback="http%3A%2F%2Fprinter.example.com%2Fready",
+        oauth_signature="74KNZJeDHnMBp0EMJ9ZHt%2FXKycU%3D"'''
+
+        oauth_authorization = parse_authorization_header(test_oauth_header_value)
+
+        control_dict = {'realm': 'Photos',
+                        'oauth_nonce': 'wIjqoS',
+                        'oauth_timestamp': '137131200',
+                        'oauth_signature': '74KNZJeDHnMBp0EMJ9ZHt/XKycU=',
+                        'oauth_consumer_key': 'dpf43f3p2l4k3l03',
+                        'oauth_signature_method': 'HMAC-SHA1',
+                        'oauth_callback': 'http://printer.example.com/ready'}
+
+
+        for k, v in control_dict.iteritems():
+            self.assertEquals(oauth_authorization[k], v)
+
+        self.assertTrue(isinstance(digest_authorization, Authorization))
+
+
+    def test_escape(self):
+        self.assertEquals(urllib.unquote(url_escape("http://sp.example.com/")),
+                          "http://sp.example.com/")
+
+
+    def test_parse_authentication_header(self):
+        test_digest_authenticate_header = '''Digest
+                 realm="testrealm@host.com",
+                 qop="auth,auth-int",
+                 nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+                 opaque="5ccc069c403ebaf9f0171e9517f40e41"'''
+
+        parsed_authentication = parse_authenticate_header(test_digest_authenticate_header)
+
+        control_dict = {'realm': 'testrealm@host.com',
+                        'qop': 'auth,auth-int',
+                        'nonce': "dcd98b7102dd2f0e8b11d0f600bfb0c093",
+                        'opaque': "5ccc069c403ebaf9f0171e9517f40e41"}
+
+        for k, v in control_dict.iteritems():
+            self.assertEquals(parsed_authentication[k], v)
+
+        self.assertTrue(isinstance(parsed_authentication, WWWAuthenticate))
+        oauth_authentication_header_value = 'OAuth realm="http://sp.example.com/"'
+
+        parsed_oauth_authentication = parse_authenticate_header(oauth_authentication_header_value)
+
+        control_dict = {'realm': 'http://sp.example.com/'}
+        for k, v in control_dict.iteritems():
+            self.assertEquals(parsed_oauth_authentication[k], v)
+
+        self.assertTrue(isinstance(parsed_oauth_authentication, WWWAuthenticate))
+
+
+    def test_generate_nonce(self):
+        self.assertEquals(len(generate_nonce(8)), 8)
+
+    def test_generate_verifier(self):
+        self.assertEquals(len(generate_nonce(8)), 8)
+
+    def test_signature_HMAC_SHA1(self):
+        consumer_secret = "consumer_secret"
+        url = 'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisco,+CA&oauth_signature_method=HMAC-SHA1'
+
+        #url = u'https://www.google.com/m8/feeds/contacts/default/full/?alt=json&max-contacts=10'
+
+
+        request = {'method': 'GET',
+                   'normalized_url': normalize_url(url),
+                   'normalized_parameters': normalize_parameters(url)}
+
+        control_signature = 'W1dE5qAXk/+9bYYCH8P6ieE2F1I='
+        control_base_signature_string = 'GET&http%3A%2F%2Fapi.simplegeo.com%2F1.0%2Fplaces%2Faddress.json&address%3D41%2520Decatur%2520St%252C%2520San%2520Francisco%252C%2520CA%26category%3Danimal%26oauth_signature_method%3DHMAC-SHA1%26q%3Dmonkeys'
+
+        method = SignatureMethod_HMAC_SHA1()
+        self.assertEquals(method.signing_base(request, consumer_secret, None)[1], control_base_signature_string)
+        self.assertEquals(method.sign(request, consumer_secret, None), control_signature)
+
+        consumer_secret = 'kd94hf93k423kf44'
+        token_secret = 'pfkkdhi9sl3r4s00'
+
+        url = 'http://photos.example.net/photos?file=vacation.jpg&oauth_consumer_key=dpf43f3p2l4k3l03&oauth_nonce=kllo9940pd9333jh&oauth_signature_method=HMAC-SHA1&oauth_timestamp=1191242096&oauth_token=nnch734d00sl2jdk&oauth_version=1.0&size=original'
+
+        request = {'method': 'GET',
+                   'normalized_url': normalize_url(url),
+                   'normalized_parameters': normalize_parameters(url)}
+
+        control_signature = 'tR3+Ty81lMeYAr/Fid0kMTYa/WM='
+        control_base_signature_string = 'GET&http%3A%2F%2Fphotos.example.net%2Fphotos&file%3Dvacation.jpg%26oauth_consumer_key%3Ddpf43f3p2l4k3l03%26oauth_nonce%3Dkllo9940pd9333jh%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1191242096%26oauth_token%3Dnnch734d00sl2jdk%26oauth_version%3D1.0%26size%3Doriginal'
+
+        method = SignatureMethod_HMAC_SHA1()
+        self.assertEquals(method.signing_base(request, consumer_secret, token_secret)[1], control_base_signature_string)
+        self.assertEquals(method.sign(request, consumer_secret, token_secret), control_signature)
+
+
+    def test_signature_PLAIN_TEXT(self):
+        consumer_secret = "consumer_secret"
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
+
+        request = {'method': 'POST',
+                   'normalized_url': normalize_url(url),
+                   'normalized_parameters': normalize_parameters(url)}
+
+        method = SignatureMethod_PLAINTEXT()
+
+        self.assertEquals(method.sign(request, "djr9rjt0jd78jf88", "jjd999tj88uiths3"), 'djr9rjt0jd78jf88%26jjd999tj88uiths3')
+        self.assertEquals(method.sign(request, "djr9rjt0jd78jf88", "jjd99$tj88uiths3"), 'djr9rjt0jd78jf88%26jjd99%2524tj88uiths3')
+        self.assertEquals(method.sign(request, "djr9rjt0jd78jf88", None), 'djr9rjt0jd78jf88%26')
+
+
+    def test_normalize_parameters(self):
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
+        parameters = 'address=41%20Decatur%20St%2C%20San%20Francisc%E2%9D%A6%2C%20CA&category=animal&q=monkeys'
+        self.assertEquals(parameters, normalize_parameters(url))
+
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
+        self.assertEquals(parameters, normalize_parameters(url))
+
+        url = 'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\xe2\x9d\xa6,+CA'
+        self.assertEquals(parameters, normalize_parameters(url))
+
+        url = 'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc%E2%9D%A6,+CA'
+        self.assertEquals(parameters, normalize_parameters(url))
+
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc%E2%9D%A6,+CA'
+        self.assertEquals(parameters, normalize_parameters(url))
+
+
+
+    def test_normalize_url(self):
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
+        control_url = "http://api.simplegeo.com/1.0/places/address.json"
+
+        self.assertEquals(control_url, normalize_url(url))
+
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
+        self.assertEquals(control_url, normalize_url(url))
+
+        url = 'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\xe2\x9d\xa6,+CA'
+        self.assertEquals(control_url, normalize_url(url))
+
+        url = 'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc%E2%9D%A6,+CA'
+        self.assertEquals(control_url, normalize_url(url))
+
+        url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc%E2%9D%A6,+CA'
+        self.assertEquals(control_url, normalize_url(url))
+
+
+    def test_oauth_consumer(self):
+        consumer_key = "ljdsfhwjkbnflkjfqkebr"
+        consumer_secret = "kjwbefpbnwefgwre"
+        consumer = OAuthConsumer(consumer_key, consumer_secret)
+        self.assertEquals(consumer_key, consumer._key)
+        self.assertEquals(consumer_secret, consumer._secret)
+
+    def test_oauth_token(self):
+        pass
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(RequestsTestCase))
     suite.addTest(unittest.makeSuite(ResponseTestCase))
     suite.addTest(unittest.makeSuite(RequestTestCase))
     suite.addTest(unittest.makeSuite(UtilsTestCase))
+    suite.addTest(unittest.makeSuite(AuthManagersTestCase))
     return suite
 
 
