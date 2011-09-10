@@ -10,12 +10,18 @@ Authentication module for human curl
 :copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
+import binascii
+import hmac
+from types import StringTypes, ListType
 
 import pycurl
-import hmac
-import binascii
-import urllib
+from urllib import urlencode
+
+import methods as hurl
+from .exceptions import InterfaceError
 from .utils import *
+
+
 try:
     from hashlib import sha1
     sha = sha1
@@ -24,15 +30,23 @@ except ImportError:
     import sha
 
 
-from .exceptions import InterfaceError, AuthError
-from .utils import *
-
-
 class AuthManager(object):
     """Auth manager base class
     """
+
+    def __init__(self):
+        self._parent_request = None
+        self._debug = None
+
     def setup(self, curl_opener):
         raise NotImplementedError
+
+    def setup_request(self, request):
+        """Setup parent request for current auth manager
+        """
+        self._parent_request = request
+        if hasattr(request, '_debug_curl'):
+            self._debug = request._debug_curl
 
 
 class BasicAuth(AuthManager):
@@ -75,71 +89,7 @@ class DigestAuth(BasicAuth):
                                                       self._password))
 
 
-
-## DEFENITIONS
-## Service Provider:
-##   A web application that allows access via OAuth.
-## User:
-##   An individual who has an account with the Service Provider.
-## Consumer:
-##   A website or application that uses OAuth to access the Service Provider on behalf of the User.
-## Protected Resource(s):
-##   Data controlled by the Service Provider, which the Consumer can access through authentication.
-## Consumer Developer:
-##   An individual or organization that implements a Consumer.
-## Consumer Key:
-##   A value used by the Consumer to identify itself to the Service Provider.
-## Consumer Secret:
-##   A secret used by the Consumer to establish ownership of the Consumer Key.
-## Request Token:
-##   A value used by the Consumer to obtain authorization from the User, and exchanged for an Access Token.
-## Access Token:
-##   A value used by the Consumer to gain access to the Protected Resources on behalf of the User, instead of using the User’s Service Provider credentials.
-## Token Secret:
-##   A secret used by the Consumer to establish ownership of a given Token.
-## OAuth Protocol Parameters:
-## Parameters with names beginning with oauth_.
-
-OAUTH_VERSION = '1.0' #OAUHT 2.0
-SIGNATURES = ("HMAC-SHA1", "RSA-SHA1", "PLAINTEXT")
-
-class OAuthToken(object):
-    pass
-
-class OAuthConsumer(object):
-    """Registered application that uses OAuth to access the Service Provider
-    on behalf of the User.
-
-    """
-    def __init__(self, key, secret):
-        # A value used by the Consumer to identify itself to the Service Provider.
-        self._key = key
-        # A secret used by the Consumer to establish ownership of the Consumer Key.
-        self._secret = secret
-
-        if key is None or secret is None:
-            raise ValueError("Key and secret must be set.")
-
-# Step 1: Get a request token. This is a temporary token that is used for
-# having the user authorize an access token and to sign the request to obtain
-# said access token.
-
-# Step 2: Redirect to the provider. Since this is a CLI script we do not
-# redirect. In a web application you would redirect the user to the URL
-# below.
-
-class OAuth(AuthManager):
-    """Auth manager for OAuth
-    """
-    def __init__(self, consumer):
-        if isinstance(consumer, OAuthConsumer):
-            self._consumer = consumer
-        else:
-            self._consumer = OAuthConsumer(*consumer)
-
-    def setup(self, curl_opener):
-        pass
-
+DEFAULT_OAUTH_VERSION = '1.0' #OAUHT 2.0
 
 
 class SignatureMethod(object):
@@ -174,7 +124,7 @@ class SignatureMethod(object):
     def check(self, request, consumer_secret, token_secret, signature):
         """Returns whether the given signature is the correct signature for
         the given consumer and token signing the given request."""
-        built = self.sign(request, consumer, token)
+        built = self.sign(request, consumer_secret, token_secret)
         return built == signature
 
 
@@ -231,3 +181,258 @@ class SignatureMethod_PLAINTEXT(SignatureMethod):
     def sign(self, request, consumer_secret, token_secret):
         key, raw = self.signing_base(request, consumer_secret, token_secret)
         return url_escape(raw)
+
+
+class OAuthAuthorization(Authorization):
+    """OAuth authorization header value
+    """
+
+    REQUIRED_FIELDS = ('oauth_consumer', 'oauth_nonce', 'oauth_signature', 'oauth_signature_method',
+                       'oauth_timestamp')
+
+    def __init__(self, data=None):
+        super(OAuthAuthorization, self).__init__('OAuth', data)
+
+    oauth_consumer = property(lambda x: x.get('oauth_consumer'), doc='''
+    ''')
+    oauth_token = property(lambda x: x.get('oauth_token'), doc='''
+    ''')
+    oauth_signature_method = property(lambda x: x.get('oauth_signature_method'), doc='''
+    ''')
+
+    oauth_signature = property(lambda x: x.get('oauth_signature'), doc='''
+    ''')
+    oauth_timestamp = property(lambda x: x.get('oauth_timestamp'), doc='''
+    ''')
+
+    oauth_nonce = property(lambda x: x.get('oauth_nonce'), doc='''
+    ''')
+    oauth_version = property(lambda x: x.get('oauth_version'), doc='''
+    ''')
+
+
+class OAuthToken(object):
+    """OAuth token wrapper
+
+    Request Token:
+    Used by the Consumer to ask the User to authorize access
+    to the Protected Resources. The User-authorized Request Token is exchanged
+    for an Access Token, MUST only be used once, and MUST NOT
+    be used for any other purpose. It is RECOMMENDED that Request Tokens
+    have a limited lifetime.
+
+    Access Token:
+    Used by the Consumer to access the Protected Resources
+    on behalf of the User. Access Tokens MAY limit access to certain
+    Protected Resources, and MAY have a limited lifetime.
+    Service Providers SHOULD allow Users to revoke Access Tokens.
+    Only the Access Token SHALL be used to access the Protect Resources.
+    """
+
+    def __init__(self, key, secret):
+        self._key = key
+        self._secret = secret
+        self._callback = None
+        self._callback_confirmed = None
+        self._verifier = None
+
+        if self._key and self._secret:
+            # ready for request to protected resources
+            self._state = 7
+        else:
+            self._state = 1
+
+    @property
+    def state(self):
+        return self._state
+
+
+class OAuthConsumer(object):
+    """Registered application that uses OAuth to access the
+    Service Provider on behalf of the User.
+
+    """
+
+    def __init__(self, key, secret):
+        # A value used by the Consumer to identify itself to the Service Provider.
+        self._key = key
+        # A secret used by the Consumer to establish ownership of the Consumer Key.
+        self._secret = secret
+
+        if key is None or secret is None:
+            raise ValueError("Key and secret must be set.")
+
+
+class OAuthManager(AuthManager):
+    """Auth manager for OAuth
+    """
+
+    SIGNATURES_METHODS = {
+        # 'RSA-SHA1': SignatureMethod_RSA_SHA1
+        'HMAC-SHA1': SignatureMethod_HMAC_SHA1,
+        'PLAINTEXT': SignatureMethod_PLAINTEXT}
+
+    def __init__(self, consumer, token=None, request_token_url=None,
+                 authorize_url=None, access_token_url=None, signature_method=None,
+                 version=DEFAULT_OAUTH_VERSION):
+
+        if isinstance(consumer, OAuthConsumer):
+            self._consumer = consumer
+        else:
+            self._consumer = OAuthConsumer(*consumer)
+
+        if isinstance(token, OAuthToken):
+            self._token = token
+        elif token is None:
+            self._token = None
+        else:
+            self._token = OAuthToken(*token)
+
+
+        if isinstance(signature_method, SignatureMethod):
+            self._signature_method = signature_method
+        elif signature_method is None:
+            self._signature_method = SignatureMethod_PLAINTEXT()
+        elif isinstance(signature_method, StringTypes):
+            if signature_method.upper() in self.SIGNATURES_METHODS.keys():
+                self._signature_method = self.SIGNATURES_METHODS[signature_method.upper()]()
+            else:
+                raise RuntimeError('Unknown signature method')
+        elif issubclass(signature_method, SignatureMethod):
+            self._signature_method = signature_method()
+        else:
+            raise RuntimeError('Unknown signature method')
+
+
+        # if consumer key, secret specified and tokens secret, key
+        # 3 if tmp_token and tmp_token_secret is given
+        # 5 if verifier
+        # 7 if token_key and token_secret
+        self._state = self._token.state if self._token else 1
+        self._realm = None
+
+        self._verifier = None
+
+        # oauth challenge urls
+        self._request_token_url = request_token_url
+        self._authorize_url = authorize_url
+        self._access_token_url = access_token_url
+
+        self._version = version
+        if self._state == 1 and (not self._request_token_url or
+                                 not self._authorize_url or
+                                 not self._access_token_url):
+            raise RuntimeError('Challenge urls required if state is 1')
+
+        self._parent_request = None
+        self._debug = None
+
+        self._tmp_token_key = None
+        self._tmp_token_secret = None
+
+    @property
+    def state(self):
+        return self._state
+
+    def verify(self, verifier):
+        """Verify access request
+        """
+        self._verifier = verifier
+        self._state = 5
+
+    def auth_header(self, realm=None):
+        params = {
+            'oauth_consumer_key': self._consumer._key,
+            'oauth_timestamp': generate_timestamp(),
+            'oauth_signature_method': self._signature_method.name,
+            'oauth_nonce': generate_nonce(),
+            'oauth_version': str(self._version),
+            'oauth_token': self._token._key,
+            'realm': realm or normalize_url(self._parent_request._build_url())
+            }
+
+        params['oauth_signature'] = self._signature_method.sign({
+            'method': self._parent_request._method.upper(),
+            'normalized_url': normalize_url(self._parent_request._build_url()),
+            'normalized_parameters': normalize_parameters(self._parent_request._build_url())},
+                                                                self._consumer._secret, self._token._secret)
+        return Authorization('OAuth', params)
+
+
+    def access_request(self):
+        """Create request to access token endpoint
+        """
+        params = {
+            'oauth_verifier': self._verifier,
+            'oauth_token': self._tmp_token_key,
+            'oauth_consumer_key': self._consumer._key,
+            'oauth_timestamp': generate_timestamp(),
+            'oauth_signature_method': self._signature_method.name,
+            'oauth_nonce': generate_nonce(),
+            'oauth_version': str(self._version),
+            'realm': normalize_url(self._access_token_url)}
+
+        params['oauth_signature'] = self._signature_method.sign({
+            'method': 'POST',
+            'normalized_url': normalize_url(self._access_token_url),
+            'normalized_parameters': normalize_parameters(self._access_token_url)
+            }, self._consumer._secret, self._tmp_token_secret)
+
+        r = hurl.post(self._access_token_url,
+                      data=urlencode(params), debug = self._debug)
+
+        ## r = hurl.post(self._access_token_url,
+        ##               headers={"Authorization": str(OAuthAuthorization(params))},
+        ##               debug=self._debug)
+
+        if r.status_code in (200, 201):
+            tokens = parse_qs(r.content)
+            self._token = OAuthToken(tokens['oauth_token'][0], tokens['oauth_token_secret'][0])
+            self._state = 7
+
+    def request_token(self):
+        """Send request to request_token endpoint
+        """
+
+        params = {
+            'oauth_consumer_key': self._consumer._key,
+            'oauth_timestamp': generate_timestamp(),
+            'oauth_signature_method': self._signature_method.name,
+            'oauth_nonce': generate_nonce(),
+            'oauth_version': str(self._version),
+            'realm': normalize_url(self._request_token_url)}
+
+        params['oauth_signature'] = self._signature_method.sign({
+            'method': 'POST',
+            'normalized_url': normalize_url(self._request_token_url),
+            'normalized_parameters': normalize_parameters(self._request_token_url)},
+                                                                self._consumer._secret, None)
+
+        r = hurl.post(self._request_token_url,
+                      data=urlencode(params), debug=self._debug)
+
+        ## r = hurl.post(self._request_token_url,
+        ##             headers={"Authorization": str(OAuthAuthorization(params))},
+        ##             debug=self._debug)
+
+        if r.status_code in (200, 201):
+            tokens = parse_qs(r.content)
+            self._tmp_token_key = tokens['oauth_token'][0]
+            self._tmp_token_secret = tokens['oauth_token_secret'][0]
+            self._state = 3 # oauth_token and oauth_secret is given
+
+    @property
+    def confirm_url(self):
+        return "%s?oauth_token=%s" % (self._authorize_url, self._tmp_token_key)
+
+    def setup(self, curl_opener):
+        if self._state == 7:
+            if isinstance(self._parent_request._headers, ListType):
+                self._parent_request._headers.append(('Authorization', str(self.auth_header())))
+            else:
+                self._parent_request._headers = data_wrapper({'Authorization': str(self.auth_header())})
+            ## curl_opener.setopt(pycurl.HTTPHEADER, ["%s: %s" % (capwords(f, "-"), v) for f, v
+            ##                                   in CaseInsensitiveDict(self._parent_request._headers).iteritems()])
+            #curl_opener.setopt(pycurl.HEADER, {'Authorization': str(self.auth_header())})
+        else:
+            raise AuthError('OAuth require token_key and token_secret')

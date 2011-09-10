@@ -295,10 +295,9 @@ class Request(object):
         Returns:
         - `response` - :Response instance
         """
-        self._url = self._build_url()
 
         try:
-            opener, body_output, headers_output = self.build_opener(self._url)
+            opener, body_output, headers_output = self.build_opener(self._build_url())
             opener.perform()
             # if close before getinfo, raises pycurl.error can't invote getinfo()
             # opener.close()
@@ -340,6 +339,12 @@ class Request(object):
         # Body and header writers
         opener.setopt(pycurl.HEADERFUNCTION, headers_output.write)
         opener.setopt(pycurl.WRITEFUNCTION, body_output.write)
+
+        if isinstance(self._auth, AuthManager):
+            self._auth.setup_request(self)
+            self._auth.setup(opener)
+        else:
+            opener.unsetopt(pycurl.USERPWD)
 
         if self._headers:
             logger.debug("Setup custom headers %s" %
@@ -510,10 +515,6 @@ class Request(object):
                     # use postfields to send vars as application/x-www-form-urlencoded
                     # opener.setopt(pycurl.POSTFIELDS, encoded_data)
 
-        if isinstance(self._auth, AuthManager):
-            self._auth.setup(opener)
-        else:
-            opener.unsetopt(pycurl.USERPWD)
 
         return opener, body_output, headers_output
 

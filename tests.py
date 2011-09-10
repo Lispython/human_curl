@@ -18,6 +18,7 @@ import cookielib
 from Cookie import Morsel
 import json
 import uuid
+from random import randint
 import logging
 from urlparse import urljoin
 import unittest
@@ -633,7 +634,6 @@ class AuthManagersTestCase(unittest.TestCase):
 
 
     def test_signature_PLAIN_TEXT(self):
-        consumer_secret = "consumer_secret"
         url = u'http://api.simplegeo.com:80/1.0/places/address.json?q=monkeys&category=animal&address=41+Decatur+St,+San+Francisc\u2766,+CA'
 
         request = {'method': 'POST',
@@ -691,9 +691,217 @@ class AuthManagersTestCase(unittest.TestCase):
         consumer = OAuthConsumer(consumer_key, consumer_secret)
         self.assertEquals(consumer_key, consumer._key)
         self.assertEquals(consumer_secret, consumer._secret)
+        self.assertTrue(isinstance(consumer, OAuthConsumer))
 
     def test_oauth_token(self):
-        pass
+        token_key = "lfsjdafjnrbeflbwreferf"
+        token_secret = "fjrenlwkjbferlwerjuhiuyg"
+        token = OAuthToken(token_key, token_secret)
+        self.assertTrue(isinstance(token, OAuthToken))
+
+
+    def test_oauth_PLAINTEXT(self):
+        consumer_key = "be4b2eab12130803"
+        consumer_secret = "a2e0e39b27d08ee2f50c4d3ec06f"
+
+        token_key = "lfsjdafjnrbeflbwreferf"
+        token_secret = "fjrenlwkjbferlwerjuhiuyg"
+
+        tmp_token_key = "kfwbehlfbqlihrbwf"
+        tmp_token_secret = "dlewknfd3jkr4nbfklb5ihrlbfg"
+
+        verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
+
+        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+
+
+        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
+        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+                           (consumer_key, consumer_secret,
+                            tmp_token_key, tmp_token_secret,
+                            verifier, token_key, token_secret)
+
+        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+
+        r = Request("GET", protected_resource,
+                    debug=stdout_debug
+                    )
+
+        consumer = OAuthConsumer(consumer_key, consumer_secret)
+
+        self.assertRaises(RuntimeError, OAuthManager, consumer)
+        oauth_manager = OAuthManager(consumer, request_token_url=request_token_url,
+                                     authorize_url=authorize_url,
+                                     access_token_url=access_token_url,
+                                     signature_method=SignatureMethod_PLAINTEXT)
+
+        self.assertEquals(oauth_manager.state, 1)
+        self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod))
+        oauth_manager.setup_request(r)
+
+        #self.assertEquals(oauth_manager._debug, stdout_debug)
+
+        oauth_manager.request_token()
+
+        self.assertEquals(oauth_manager.state, 3)
+        self.assertEquals(oauth_manager._tmp_token_key, tmp_token_key)
+        self.assertEquals(oauth_manager._tmp_token_secret, tmp_token_secret)
+
+        self.assertEquals(oauth_manager.confirm_url, "%s?oauth_token=%s" % \
+                          (oauth_manager._authorize_url, oauth_manager._tmp_token_key))
+
+        pin = json.loads(requests.get(oauth_manager.confirm_url,
+                                           debug=stdout_debug).content)['verifier']
+        oauth_manager.verify(pin)
+
+
+        self.assertEquals(oauth_manager.state, 5)
+        self.assertEquals(pin, oauth_manager._verifier)
+        self.assertEquals(tmp_token_key, oauth_manager._tmp_token_key)
+        self.assertEquals(tmp_token_secret, oauth_manager._tmp_token_secret)
+
+        oauth_manager.access_request()
+
+        self.assertTrue(isinstance(oauth_manager._token, OAuthToken))
+        self.assertEquals(oauth_manager._token._key, token_key)
+        self.assertEquals(oauth_manager._token._secret, token_secret)
+        self.assertEquals(oauth_manager.state, 7)
+
+        ## opener, body_output, headers_output = r.build_opener(r._build_url())
+        ## oauth_manager.setup(opener)
+        ## opener.perform()
+        ## response = Response(url=r._build_url(), curl_opener=opener,
+        ##                      body_output=body_output,
+        ##                      headers_output=headers_output, request=r,
+        ##                      cookies=r._cookies)
+        ## self.assertEquals(response.status_code, 200)
+        ## self.assertEquals(json.loads(response.content)['success'], True)
+
+
+    def test_oauth_HMAC_SHA1(self):
+        consumer_key = "be4b2eab12130803"
+        consumer_secret = "a2e0e39b27d08ee2f50c4d3ec06f"
+
+        token_key = "lfsjdafjnrbeflbwreferf"
+        token_secret = "fjrenlwkjbferlwerjuhiuyg"
+
+        tmp_token_key = "kfwbehlfbqlihrbwf"
+        tmp_token_secret = "dlewknfd3jkr4nbfklb5ihrlbfg"
+
+        verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
+
+        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+
+
+        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
+        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+                           (consumer_key, consumer_secret,
+                            tmp_token_key, tmp_token_secret,
+                            verifier, token_key, token_secret)
+
+        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+
+        r = Request("GET", protected_resource,
+                    debug=stdout_debug,
+                    headers = (("Test-header", "test-value"), )
+                    )
+
+        consumer = OAuthConsumer(consumer_key, consumer_secret)
+
+        self.assertRaises(RuntimeError, OAuthManager, consumer)
+        oauth_manager = OAuthManager(consumer, request_token_url=request_token_url,
+                                     authorize_url=authorize_url,
+                                     access_token_url=access_token_url,
+                                     signature_method=SignatureMethod_HMAC_SHA1)
+
+        self.assertEquals(oauth_manager.state, 1)
+        self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod))
+        oauth_manager.setup_request(r)
+
+#        self.assertEquals(oauth_manager._debug, stdout_debug)
+
+        oauth_manager.request_token()
+
+        self.assertEquals(oauth_manager.state, 3)
+        self.assertEquals(oauth_manager._tmp_token_key, tmp_token_key)
+        self.assertEquals(oauth_manager._tmp_token_secret, tmp_token_secret)
+
+        self.assertEquals(oauth_manager.confirm_url, "%s?oauth_token=%s" % \
+                          (oauth_manager._authorize_url, oauth_manager._tmp_token_key))
+
+        pin = json.loads(requests.get(oauth_manager.confirm_url,
+                                           debug=stdout_debug).content)['verifier']
+        oauth_manager.verify(pin)
+
+
+        self.assertEquals(oauth_manager.state, 5)
+        self.assertEquals(pin, oauth_manager._verifier)
+        self.assertEquals(tmp_token_key, oauth_manager._tmp_token_key)
+        self.assertEquals(tmp_token_secret, oauth_manager._tmp_token_secret)
+
+        oauth_manager.access_request()
+
+        self.assertTrue(isinstance(oauth_manager._token, OAuthToken))
+        self.assertEquals(oauth_manager._token._key, token_key)
+        self.assertEquals(oauth_manager._token._secret, token_secret)
+        self.assertEquals(oauth_manager.state, 7)
+        ## opener, body_output, headers_output = r.build_opener(r._build_url())
+        ## oauth_manager.setup(opener)
+        ## opener.perform()
+        ## response = Response(url=r._build_url(), curl_opener=opener,
+        ##                      body_output=body_output,
+        ##                      headers_output=headers_output, request=r,
+        ##                      cookies=r._cookies)
+        ## self.assertEquals(response.status_code, 200)
+        ## self.assertEquals(json.loads(response.content)['success'], True)
+
+
+    def test_3_legged_oauth(self):
+        consumer_key = "be4b2eab12130803"
+        consumer_secret = "a2e0e39b27d08ee2f50c4d3ec06f"
+
+        token_key = "lfsjdafjnrbeflbwreferf"
+        token_secret = "fjrenlwkjbferlwerjuhiuyg"
+
+        tmp_token_key = "kfwbehlfbqlihrbwf"
+        tmp_token_secret = "dlewknfd3jkr4nbfklb5ihrlbfg"
+
+        verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
+
+        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+
+
+        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
+        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+                           (consumer_key, consumer_secret,
+                            tmp_token_key, tmp_token_secret,
+                            verifier, token_key, token_secret)
+
+        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+
+
+        consumer = OAuthConsumer(consumer_key, consumer_secret)
+        token = OAuthToken(token_key, token_secret)
+
+        oauth_manager = OAuthManager(consumer, token=token,
+                                     signature_method=SignatureMethod_HMAC_SHA1)
+
+        r = requests.get(protected_resource,
+                         debug=stdout_debug,
+                         auth=oauth_manager
+                         )
+
+        self.assertEquals(oauth_manager.state, 7)
+        self.assertTrue(isinstance(oauth_manager._signature_method, SignatureMethod_HMAC_SHA1))
+
+#        self.assertEquals(oauth_manager._debug, stdout_debug)
+        self.assertEquals(r.status_code, 200)
+        self.assertEquals(json.loads(r.content)['success'], True)
+
+
 
 def suite():
     suite = unittest.TestSuite()

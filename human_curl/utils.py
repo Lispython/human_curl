@@ -19,6 +19,7 @@ import random
 from urllib2 import parse_http_list
 from urllib import quote_plus
 from Cookie import Morsel
+from string import capwords
 from os.path import exists as file_exists
 from cookielib import CookieJar, Cookie
 from types import ListType, DictType, TupleType, FileType, StringTypes
@@ -41,7 +42,7 @@ __all__ = ('decode_gzip', 'CaseInsensitiveDict', 'from_cookiejar', 'to_cookiejar
            'morsel_to_cookie', 'data_wrapper', 'make_curl_post_files', 'url_escape',
            'utf8', 'to_unicode', 'parse_authenticate_header', 'parse_authorization_header',
            'WWWAuthenticate', 'Authorization', 'parse_dict_header', 'generate_nonce',
-           'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters', 'parse_qs')
+           'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters', 'parse_qs', 'stdout_debug')
 
 def url_escape(value):
     """Returns a valid URL-encoded version of the given value."""
@@ -109,6 +110,9 @@ class CaseInsensitiveDict(dict):
 
     def has_key(self, key):
         return super(CaseInsensitiveDict, self).has_key(key.lower())
+
+    def iteritems(self):
+        return ((capwords(k, '-'), v) for k, v in super(CaseInsensitiveDict, self).iteritems())
 
 
 def from_cookiejar(cookiejar):
@@ -428,7 +432,7 @@ class Authorization(dict):
 
     AUTH_TYPES = ("Digest", "Basic", "OAuth")
 
-    def __init__(self, auth_type='basic', data=None):
+    def __init__(self, auth_type='Basic', data=None):
         if auth_type.lower() not in [t.lower() for t in self.AUTH_TYPES]:
             raise RuntimeError("Unsupported auth type: %s" % auth_type)
         dict.__init__(self, data or {})
@@ -449,8 +453,8 @@ class Authorization(dict):
         """Convert values into WWW-Authenticate header value
         """
         d = dict(self)
-        return "%s %s" % (self._auth_type.title(), ", ".join("%s=\"%s\"" % (k, v)
-                                                             for k, v in d.iteritems()))
+        return "%s %s" % (self._auth_type, ", ".join("%s=\"%s\"" % (k, v)
+                                                             for k, v in sorted(d.iteritems())))
 
 
     # Digest auth properties http://tools.ietf.org/html/rfc2069#page-4
@@ -461,7 +465,6 @@ class Authorization(dict):
 
     domain = property(lambda x: x.get('domain'), doc="""domain
     A comma-separated list of URIs, as specified for HTTP/1.0.""")
-
 
 
 
@@ -483,7 +486,7 @@ def normalize_url(url):
         return None
 
 
-def normalize_parameters(url):
+def normalize_parameters(url, params=None):
     """Normalize url parameters
 
     The parameters collected in Section 3.4.1.3 are normalized into a
@@ -499,6 +502,23 @@ def normalize_parameters(url):
     url_items = [(utf8(k), utf8(v)) for k, v in url_items if k != 'oauth_signature' ]
     items.extend(url_items)
 
+    if params:
+        for key, value in params.iteritems():
+            if key == 'oauth_signature':
+                continue
+            # 1.0a/9.1.1 states that kvp must be sorted by key, then by value,
+            # so we unpack sequence values into multiple items for sorting.
+            if isinstance(value, basestring):
+                items.append((utf8(key), utf8(value)))
+            else:
+                try:
+                    value = list(value)
+                except TypeError, e:
+                    assert 'is not iterable' in str(e)
+                    items.append((utf8(key), utf8(value)))
+                else:
+                    items.extend((utf8(key), utf8(item)) for item in value)
+
     items.sort()
     encoded_str = urllib.urlencode(items)
     # Encode signature parameters per Oauth Core 1.0 protocol
@@ -506,3 +526,17 @@ def normalize_parameters(url):
     # (http://tools.ietf.org/html/draft-hammer-oauth-07#section-3.6)
     # Spaces must be encoded with "%20" instead of "+"
     return encoded_str.replace('+', '%20').replace('%7E', '~')
+
+
+
+def stdout_debug(debug_type, debug_msg):
+    """Print messages into stdout
+    """
+    debug_types = ('I', '<', '>', '<', '>')
+    if debug_type == 0:
+        print('%s' % debug_msg.strip())
+    elif debug_type in (1, 2):
+        for line in debug_msg.splitlines():
+            print('%s %s' % (debug_types[debug_type], line))
+    elif debug_type == 4:
+        print('%s %r' % (debug_types[debug_type], debug_msg))
