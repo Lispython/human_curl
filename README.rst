@@ -22,6 +22,7 @@ Features
 - Certificate validation
 - ipv6 support
 - Basic/Digest authentication
+- OAuth support!
 - Debug request and response headers
 
 
@@ -93,6 +94,10 @@ Usage
     >>> basic_auth_manager = BasicAuth('username', 'password')
     >>> r = hurl.post('http://h.wrttn.me/basic-auth/username/password',
     ... auth=basic_auth_manager)
+    >>> r.status_code
+    200
+    >>> oauth_manager = OAuthManager((CONSUMER_KEY, CONSUMER_SECRET), (TOKEN_KEY, TOKEN_SECRET))
+    >>> r = hurl.get('http://oauth-protected.com/resource', auth=oauth_manager)
     >>> r.status_code
     200
 
