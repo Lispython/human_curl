@@ -136,7 +136,8 @@ class Request(object):
     def __init__(self, method, url, params=None, data=None, headers=None, cookies=None,
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
                  max_redirects=5, proxy=None, auth=None, network_interface=None, use_gzip=None,
-                 validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None, ip_v6=False, **kwargs):
+                 validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None,
+                 ip_v6=False, options=None, **kwargs):
         """A single HTTP / HTTPS request
 
         Arguments:
@@ -173,6 +174,7 @@ class Request(object):
         - `debug`: (bool) use for `pycurl.DEBUGFUNCTION`
         - `user_agent`: (string) user agent
         - `ip_v6`: (bool) use ipv6 protocol
+        - `options`: (tuple, list) low level pycurl options using
         """
         self._url = url
         if not method or not isinstance(method, StringTypes):
@@ -247,6 +249,13 @@ class Request(object):
         self._ip_v6 = ip_v6
 
         self.response = None
+
+        if options is None:
+            self._options = None
+        elif isinstance(options, (ListType, TupleType)):
+            self._options = data_wrapper(options)
+        else:
+            raise InterfaceError("options must be None, ListType or TupleType")
 
     def __repr__(self, ):
         # TODO: collect `Request` settings into representation string
@@ -522,6 +531,9 @@ class Request(object):
                     # use postfields to send vars as application/x-www-form-urlencoded
                     # opener.setopt(pycurl.POSTFIELDS, encoded_data)
 
+        if isinstance(self._options, (TupleType, ListType)):
+            for key, value in self._options:
+                opener.setopt(key, value)
 
         return opener, body_output, headers_output
 
