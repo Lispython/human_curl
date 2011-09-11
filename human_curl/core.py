@@ -135,7 +135,7 @@ class Request(object):
 
     def __init__(self, method, url, params=None, data=None, headers=None, cookies=None,
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
-                 max_redirects=5, proxies=None, auth=None, network_interface=None, use_gzip=None,
+                 max_redirects=5, proxy=None, auth=None, network_interface=None, use_gzip=None,
                  validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None, ip_v6=False, **kwargs):
         """A single HTTP / HTTPS request
 
@@ -155,7 +155,7 @@ class Request(object):
         - `timeout`: (float) connection time out
         - `connection_timeout`: (float)
         - `allow_redirects`: (bool) follow redirects parametr
-        - `proxies`: (dict, tuple or list) of proxies
+        - `proxy`: (dict, tuple or list) of proxies
            Examples:
                ('http', ('127.0.0.1', 9050))
                ('http', ('127.0.0.1', 9050, ('username', 'password'))
@@ -207,7 +207,13 @@ class Request(object):
         else:
             self._cookies = None
 
-        self._proxies = data_wrapper(proxies)
+        if isinstance(proxy, NoneType):
+            self._proxy = proxy
+        elif isinstance(proxy, TupleType):
+            if len(proxy) != 2 or not isinstance(proxy[1], TupleType):
+                raise InterfaceError('Proxy must be a tuple object')
+            else:
+                self._proxy = proxy
 
         if not isinstance(network_interface, (StringTypes, NoneType)):
             raise InterfaceError("Network interface argument must be string or None")
@@ -390,12 +396,13 @@ class Request(object):
             opener.setopt(pycurl.INTERFACE, self._network_interface)
 
         # Setup proxy for request
-        if self._proxies is not None:
-            logger.debug("Use proxies %s" % self._proxies)
-            if len(self._proxies) > 2:
-                proxy_type, proxy_addr, proxy_auth = self._proxies
+        if self._proxy is not None:
+            logger.debug("Use proxies %s - %s" % self._proxy)
+            if len(self._proxy) > 2:
+                proxy_type, proxy_addr, proxy_auth = self._proxy
             else:
-                proxy_type, proxy_addr, proxy_auth = self._proxies, None
+                proxy_type, proxy_addr = self._proxy
+                proxy_auth = None
 
             opener.setopt(pycurl.PROXY, proxy_addr[0])
             opener.setopt(pycurl.PROXYPORT, proxy_addr[1])
@@ -657,7 +664,8 @@ class Response(object):
                 if not header:
                     continue
                 elif not header.startswith("HTTP"):
-                    field, value = header.split(": ")
+                    print(header)
+                    field, value = header.split(":", 1)
                     if field.startswith("Location"):
                         # maybe not good
                         if not value.startswith("http"):

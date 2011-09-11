@@ -15,7 +15,7 @@ __all__ = ("get", "put", "head", "delete", "post", "options", "request")
 
 
 def request(method, url, params=None, data=None, headers=None, cookies=None,
-            files=None, timeout=None, allow_redirects=False, max_redirects=5, proxies=None,
+            files=None, timeout=None, allow_redirects=False, max_redirects=5, proxy=None,
             auth=None, network_interface=None, use_gzip=None, validate_cert=False,
             ca_certs=None, debug=False, user_agent=None, ip_v6=False, hooks=None):
     """Construct and sends a Request object. Returns :class `Response`.
@@ -37,7 +37,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     - `timeout`: (float) connection time out
     - `connection_timeout`: (float)
     - `allow_redirects`: (bool) follow redirects parametr
-    - `proxies`: (dict, tuple or list) of proxies
+    - `proxy`: (dict, tuple or list) of proxies
        Examples:
            ('http', ('127.0.0.1', 9050))
            ('http', ('127.0.0.1', 9050, ('username', 'password'))
@@ -58,7 +58,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     """
     args = dict(
         method=method, url=url, params=params, data=data, headers=headers, cookies=cookies,
-        files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=max_redirects, proxies=proxies,
+        files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=max_redirects, proxy=proxy,
         auth=auth, network_interface=network_interface, use_gzip=use_gzip, validate_cert=validate_cert,
         ca_certs=ca_certs, debug=debug, user_agent=user_agent, ip_v6=ip_v6)
 
