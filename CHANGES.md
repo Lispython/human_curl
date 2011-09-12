@@ -1,3 +1,18 @@
+# v0.0.4
+
+- Added hooks
+- Added custom pycurl options
+
+# v0.0.3 (11-09-2011)
+
+- Added OAuth support ( OAuth 1.0)
+
+# v0.0.2
+
+Changes:
+
+- Added digest auth
+
 # v0.0.1 (31-08-2011)
 
 First version

@@ -330,6 +330,25 @@ class RequestsTestCase(unittest.TestCase):
         r = requests.get("http://➡.ws/pep8")
         self.assertEquals(r.url, 'http://xn--hgi.ws/pep8')
 
+    def test_hooks(self):
+        def pre_hook(r):
+            r.pre_hook = True
+
+        def post_hook(r):
+            r.post_hook = True
+
+        def response_hook(r):
+            r._status_code = 700
+            return r
+
+        r1 = requests.get("http://h.wrttn.me/get", hooks={'pre_request': pre_hook,
+                                                          'post_request': post_hook})
+        self.assertEquals(r1._request.pre_hook, True)
+        self.assertEquals(r1._request.post_hook, True)
+
+        r2 = requests.get("http://h.wrttn.me/get", hooks={'response_hook': response_hook})
+        self.assertEquals(r2._status_code, 700)
+
 
 class ResponseTestCase(unittest.TestCase):
 

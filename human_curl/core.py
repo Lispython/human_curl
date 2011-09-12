@@ -676,7 +676,6 @@ class Response(object):
                 if not header:
                     continue
                 elif not header.startswith("HTTP"):
-                    print(header)
                     field, value = header.split(":", 1)
                     if field.startswith("Location"):
                         # maybe not good

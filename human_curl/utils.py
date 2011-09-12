@@ -18,6 +18,7 @@ import pycurl
 import random
 from urllib2 import parse_http_list
 from urllib import quote_plus
+from logging import getLogger
 from Cookie import Morsel
 from string import capwords
 from os.path import exists as file_exists
@@ -42,7 +43,10 @@ __all__ = ('decode_gzip', 'CaseInsensitiveDict', 'from_cookiejar', 'to_cookiejar
            'morsel_to_cookie', 'data_wrapper', 'make_curl_post_files', 'url_escape',
            'utf8', 'to_unicode', 'parse_authenticate_header', 'parse_authorization_header',
            'WWWAuthenticate', 'Authorization', 'parse_dict_header', 'generate_nonce',
-           'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters', 'parse_qs', 'stdout_debug')
+           'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters',
+           'parse_qs', 'stdout_debug', 'dispatch_hook')
+
+logger = getLogger("curl_requests")
 
 def url_escape(value):
     """Returns a valid URL-encoded version of the given value."""
@@ -540,3 +544,16 @@ def stdout_debug(debug_type, debug_msg):
             print('%s %s' % (debug_types[debug_type], line))
     elif debug_type == 4:
         print('%s %r' % (debug_types[debug_type], debug_msg))
+
+
+def dispatch_hook(key, hooks, data):
+    """Dispatch hooks
+    """
+    hooks = hooks or dict()
+
+    if key in hooks:
+        try:
+            data = hooks.get(key).__call__(data) or data
+        except Exception, e:
+            logger.warn(str(e))
+    return data

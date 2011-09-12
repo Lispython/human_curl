@@ -10,6 +10,7 @@ HTTP methods functions
 """
 
 from .core import Request
+from .utils import dispatch_hook
 
 __all__ = ("get", "put", "head", "delete", "post", "options", "request")
 
@@ -17,7 +18,8 @@ __all__ = ("get", "put", "head", "delete", "post", "options", "request")
 def request(method, url, params=None, data=None, headers=None, cookies=None,
             files=None, timeout=None, allow_redirects=False, max_redirects=5, proxy=None,
             auth=None, network_interface=None, use_gzip=None, validate_cert=False,
-            ca_certs=None, debug=False, user_agent=None, ip_v6=False, hooks=None, options=None):
+            ca_certs=None, debug=False, user_agent=None, ip_v6=False, hooks=None, options=None,
+            callback=None):
     """Construct and sends a Request object. Returns :class `Response`.
 
     Arguments:
@@ -61,11 +63,20 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
         method=method, url=url, params=params, data=data, headers=headers, cookies=cookies,
         files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=max_redirects, proxy=proxy,
         auth=auth, network_interface=network_interface, use_gzip=use_gzip, validate_cert=validate_cert,
-        ca_certs=ca_certs, debug=debug, user_agent=user_agent, ip_v6=ip_v6, options=options)
+        ca_certs=ca_certs, debug=debug, user_agent=user_agent, ip_v6=ip_v6, options=options, callback=callback)
 
     # TODO: add hooks
     r = Request(**args)
+
+    # process request before send
+    r = dispatch_hook('pre_request', hooks, r)
+
     r.send()
+
+    # process request after send
+    r = dispatch_hook('post_request', hooks, r)
+
+    r.response = dispatch_hook('response_hook', hooks, r.response)
 
     return r.response
 
