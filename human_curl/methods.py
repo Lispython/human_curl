@@ -76,6 +76,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     # process request after send
     r = dispatch_hook('post_request', hooks, r)
 
+    # process response
     r.response = dispatch_hook('response_hook', hooks, r.response)
 
     return r.response

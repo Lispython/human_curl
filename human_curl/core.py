@@ -159,15 +159,12 @@ class Request(object):
         - `proxy`: (dict, tuple or list) of proxies
            Examples:
                ('http', ('127.0.0.1', 9050))
-               ('http', ('127.0.0.1', 9050, ('username', 'password'))
-               TODO: multiple proxies support?
-               (('http', ('127.0.0.1', 9050)),
-                ('socks', ('127.0.0.1', 9050, ('username', 'password')))
+               ('http', ('127.0.0.1', 9050, ('username', 'password')))
         - `auth`: (dict, tuple or list) for resource base auth
         - `network_interface`: (str) Pepform an operation using a specified interface.
            You can enter interface name, IP address or host name.
         - `use_gzip`: (bool) accept gzipped data
-        - `validate_cert`: (bool)
+        - `validate_cert`: (bool) validate server certificate
         - `ca_certs`: tells curl to use the specified certificate file to verify the peer.
         - `cert`: (string) tells curl to use the specified certificate file
            when getting a file with HTTPS.
@@ -243,7 +240,7 @@ class Request(object):
         # Certificates
         self._validate_cert = validate_cert
         self._ca_certs = ca_certs
-        self._cert = None
+        self._cert = cert
         self._start_time = time.time()
         self._debug_curl = debug
         self._ip_v6 = ip_v6
@@ -450,7 +447,6 @@ class Request(object):
         ## If this option is used several times, the last one will be used.
         if self._cert:
             opener.setopt(pycurl.SSLCERT, self._cert)
-
 
         if self._ip_v6:
             opener.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
