@@ -18,8 +18,8 @@ __all__ = ("get", "put", "head", "delete", "post", "options", "request")
 def request(method, url, params=None, data=None, headers=None, cookies=None,
             files=None, timeout=None, allow_redirects=False, max_redirects=5, proxy=None,
             auth=None, network_interface=None, use_gzip=None, validate_cert=False,
-            ca_certs=None, debug=False, user_agent=None, ip_v6=False, hooks=None, options=None,
-            callback=None):
+            ca_certs=None, cert=None, debug=False, user_agent=None, ip_v6=False,
+            hooks=None, options=None, callback=None):
     """Construct and sends a Request object. Returns :class `Response`.
 
     Arguments:
@@ -51,6 +51,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     - `use_gzip`: (bool) accept gzipped data
     - `validate_cert`: (bool)
     - `ca_certs`:
+    - `cert`: (string) use for client-side certificate authentication
     - `debug`: (bool) use for `pycurl.DEBUGFUNCTION`
     - `user_agent`: (string) user agent
     - `ip_v6`: (bool) use ipv6 protocol
@@ -63,7 +64,8 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
         method=method, url=url, params=params, data=data, headers=headers, cookies=cookies,
         files=files, timeout=timeout, allow_redirects=allow_redirects, max_redirects=max_redirects, proxy=proxy,
         auth=auth, network_interface=network_interface, use_gzip=use_gzip, validate_cert=validate_cert,
-        ca_certs=ca_certs, debug=debug, user_agent=user_agent, ip_v6=ip_v6, options=options, callback=callback)
+        ca_certs=ca_certs, cert=cert, debug=debug, user_agent=user_agent, ip_v6=ip_v6, options=options,
+        callback=callback)
 
     # TODO: add hooks
     r = Request(**args)
