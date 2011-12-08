@@ -31,6 +31,7 @@ except ImportError:
     from StringIO import StringIO
 
 import human_curl as requests
+import human_curl.async_client as async
 from human_curl import Request, Response
 from human_curl.auth import *
 from human_curl.utils import *
@@ -922,6 +923,14 @@ class AuthManagersTestCase(unittest.TestCase):
 
 
 
+class AsyncTestCase(unittest.TestCase):
+
+    def test_methods(self):
+
+        logger.debug(async.get(build_url("get")))
+        self.assertTrue(isinstance(async.get(build_url("get")), Request))
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(RequestsTestCase))
@@ -929,6 +938,7 @@ def suite():
     suite.addTest(unittest.makeSuite(RequestTestCase))
     suite.addTest(unittest.makeSuite(UtilsTestCase))
     suite.addTest(unittest.makeSuite(AuthManagersTestCase))
+    suite.addTest(unittest.makeSuite(AsyncTestCase))
     return suite
 
 
