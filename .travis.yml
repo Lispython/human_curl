@@ -1,0 +1,19 @@
+language: python
+
+python:
+    - "2.6"
+    - "2.7"
+
+env: TESTER_URL=http://h.wrttn.me/
+
+
+branches:
+    only:
+        - master
+
+install:
+    - pip install nose
+    - pip install -U pycurl
+
+script:
+    - make test
