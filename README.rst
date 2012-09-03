@@ -6,6 +6,9 @@ Curl requests for Humans
 human_curl allow you to send  **HEAD**, **GET**, **POST**, **PUT**,
 **OPTIONS**, and **DELETE** HTTP requests.
 
+.. image:: https://secure.travis-ci.org/lispython/human_curl.png?branch=master
+	   :target: https://secure.travis-ci.org/lispython/human_curl
+
 Features
 --------
 
