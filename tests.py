@@ -48,9 +48,19 @@ TEST_METHODS = (
     ('put', requests.put),
     ('options', requests.options))
 
-# Use https://github.com/Lispython/httphq
 HTTP_TEST_URL = "http://h.wrttn.me"
 HTTPS_TEST_URL = "https://h.wrttn.me"
+
+# Use https://github.com/Lispython/httphq
+if 'HTTP_TEST_URL' not in os.environ:
+    os.environ['HTTP_TEST_URL'] = 'http://h.wrttn.me'
+
+if 'HTTPS_TEST_URL' not in os.environ:
+    os.environ['HTTPS_TEST_URL'] = 'https://h.wrttn.me'
+
+HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL')
+HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL')
+
 
 
 def build_url(*parts):

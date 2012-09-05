@@ -32,14 +32,13 @@ from .utils import (decode_gzip, CaseInsensitiveDict, to_cookiejar,
                    morsel_to_cookie, data_wrapper, make_curl_post_files, utf8, to_unicode)
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 try:
-    import signal
-    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+    import platform
+    if platform.system() != 'windows':
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except ImportError:
     pass
 
