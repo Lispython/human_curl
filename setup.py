@@ -88,7 +88,6 @@ setup(
     packages=["human_curl"],
     install_requires=[
         'pycurl',
-        'tornado'
         ],
     license="BSD",
 #    test_suite="nose.collector",

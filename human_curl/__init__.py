@@ -23,13 +23,14 @@ Features:
     - Basic/Digest authentication
     - OAuth support!
     - Debug request and response headers
+    - Multicurl support
 
 :copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
 __all__ = ('get', 'put', 'head', 'post', 'delete', 'request', 'options',
-           'Request', 'Response', 'get_version')
+           'Request', 'Response', 'get_version', 'AsyncClient', 'async')
 __author__ = "Alex Lispython (alex@obout.ru)"
 __license__ = "BSD, see LICENSE for more details"
 __version_info__ = (0, 0, 5)

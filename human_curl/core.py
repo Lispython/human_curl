@@ -254,6 +254,8 @@ class Request(object):
         else:
             raise InterfaceError("options must be None, ListType or TupleType")
 
+        self._curl = None
+
     def __repr__(self, ):
         # TODO: collect `Request` settings into representation string
         return "<%s: %s [ %s ]>" % (self.__class__.__name__, self._method, self._url)
@@ -309,7 +311,13 @@ class Request(object):
         """
 
         try:
-            opener, body_output, headers_output = self.build_opener(self._build_url())
+            opener = self.build_opener(self._build_url())
+
+            body_output = StringIO()
+            headers_output = StringIO()
+
+            self.setup_writers(opener, headers_output.write, body_output.write)
+
             opener.perform()
             # if close before getinfo, raises pycurl.error can't invote getinfo()
             # opener.close()
@@ -322,6 +330,12 @@ class Request(object):
                                      cookies=self._cookies)
 
         return self.response
+
+    def setup_writers(self, opener, headers_writer, body_writer):
+        # Body and header writers
+        opener.setopt(pycurl.HEADERFUNCTION, headers_writer)
+        opener.setopt(pycurl.WRITEFUNCTION, body_writer)
+
 
     def build_opener(self, url):
         """Compile pycurl.Curl instance
@@ -341,16 +355,11 @@ class Request(object):
         # http://curl.haxx.se/mail/curlpython-2005-06/0004.html
         # http://curl.haxx.se/mail/lib-2010-03/0114.html
         opener = pycurl.Curl()
-        body_output = StringIO()
-        headers_output = StringIO()
 
         logger.debug("Open url: %s" % url)
         opener.setopt(pycurl.URL, url)
         opener.setopt(pycurl.NOSIGNAL, 1)
 
-        # Body and header writers
-        opener.setopt(pycurl.HEADERFUNCTION, headers_output.write)
-        opener.setopt(pycurl.WRITEFUNCTION, body_output.write)
 
         if isinstance(self._auth, AuthManager):
             self._auth.setup_request(self)
@@ -531,7 +540,9 @@ class Request(object):
             for key, value in self._options:
                 opener.setopt(key, value)
 
-        return opener, body_output, headers_output
+        self._opener = opener
+
+        return opener
 
 
 class Response(object):
