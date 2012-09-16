@@ -7,7 +7,7 @@ human_curl.auth
 
 Authentication module for human curl
 
-:copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: (c) 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 import binascii

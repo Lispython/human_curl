@@ -6,7 +6,7 @@ human_curl
 
 Simple cURL wrapper for Humans
 
-:copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: (c) 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
@@ -21,7 +21,7 @@ except:
 
 from setuptools import Command, setup
 
-__version__ = (0, 0, 4)
+__version__ = (0, 0, 5)
 
 
 try:
@@ -87,7 +87,7 @@ setup(
     url="https://github.com/lispython/human_curl",
     packages=["human_curl"],
     install_requires=[
-        'pycurl'
+        'pycurl',
         ],
     license="BSD",
 #    test_suite="nose.collector",

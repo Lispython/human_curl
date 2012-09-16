@@ -19,7 +19,7 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
             files=None, timeout=None, allow_redirects=False, max_redirects=5, proxy=None,
             auth=None, network_interface=None, use_gzip=None, validate_cert=False,
             ca_certs=None, cert=None, debug=False, user_agent=None, ip_v6=False,
-            hooks=None, options=None, callback=None):
+            hooks=None, options=None, callback=None, return_response=True):
     """Construct and sends a Request object. Returns :class `Response`.
 
     Arguments:
@@ -73,6 +73,8 @@ def request(method, url, params=None, data=None, headers=None, cookies=None,
     # process request before send
     r = dispatch_hook('pre_request', hooks, r)
 
+    if not return_response:
+        return r
     r.send()
 
     # process request after send

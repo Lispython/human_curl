@@ -23,16 +23,17 @@ Features:
     - Basic/Digest authentication
     - OAuth support!
     - Debug request and response headers
+    - Multicurl support
 
-:copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: (c) 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
 __all__ = ('get', 'put', 'head', 'post', 'delete', 'request', 'options',
-           'Request', 'Response', 'get_version')
+           'Request', 'Response', 'get_version', 'AsyncClient', 'async_client')
 __author__ = "Alex Lispython (alex@obout.ru)"
 __license__ = "BSD, see LICENSE for more details"
-__version_info__ = (0, 0, 4)
+__version_info__ = (0, 0, 5)
 __version__ = ".".join(map(str, __version_info__))
 __maintainer__ = "Alexandr Lispython (alex@obout.ru)"
 
@@ -43,3 +44,4 @@ def get_version():
 from .methods import get, put, head, post, delete, request, options
 from .core import Request, Response
 from .exceptions import CurlError, InterfaceError, InvalidMethod, AuthError
+from .async import AsyncClient, async_client

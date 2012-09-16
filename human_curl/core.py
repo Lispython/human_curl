@@ -2,14 +2,12 @@
 # -*- coding:  utf-8 -*-
 """
 human_curl.core
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Heart of human_curl library
 
 
-TODO: add oauth requests method
-
-:copyright: Copyright 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: Copyright 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
@@ -26,27 +24,29 @@ from types import (StringTypes, TupleType, DictType, NoneType,
                    ListType, FunctionType)
 
 import pycurl
-from .auth import AuthManager, BasicAuth, DigestAuth
-from .exceptions import (HTTPError, InvalidMethod, CurlError, InterfaceError)
+from . import get_version
+from .compat import json
+from .auth import AuthManager, BasicAuth
+from .exceptions import (InvalidMethod, CurlError, InterfaceError)
 from .utils import (decode_gzip, CaseInsensitiveDict, to_cookiejar,
-                   morsel_to_cookie, data_wrapper, make_curl_post_files, utf8, to_unicode)
+                    morsel_to_cookie, data_wrapper, make_curl_post_files,
+                    to_unicode, logger_debug)
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 try:
-    import signal
-    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+    import platform
+    if platform.system() != 'windows':
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except ImportError:
     pass
 
 
 __all__ = ("Request", "Response", "HTTPError", "InvalidMethod", "CurlError", "CURL_INFO_MAP")
 
-logger = getLogger("curl_requests")
+logger = getLogger("human_curl.core")
 
 # DEFAULTS
 DEFAULT_TIME_OUT = 15.0
@@ -254,24 +254,33 @@ class Request(object):
         else:
             raise InterfaceError("options must be None, ListType or TupleType")
 
+        self._curl = None
+
+        self.body_output = StringIO()
+        self.headers_output = StringIO()
+
     def __repr__(self, ):
         # TODO: collect `Request` settings into representation string
         return "<%s: %s [ %s ]>" % (self.__class__.__name__, self._method, self._url)
 
     @property
     def user_agent(self):
-        # from curl_requests import get_version
-        if self._user_agent is None:
-            self._user_agent = "Mozilla/5.0 (compatible; human_curl; +http://h.wrttn.me/human_curl)"
+        if not self._user_agent:
+            self._user_agent = "Mozilla/5.0 (compatible; human_curl; {0}; +http://h.wrttn.me/human_curl)".format(get_version())
         return self._user_agent
+
+    @property
+    def url(self):
+        if not self._url:
+            self._url = self._build_url()
+        return self._url
 
     def _build_url(self):
         """Build resource url
 
         Parsing `self._urls`, add self._parms to query string if need
 
-        Returns:
-        :self._url: resource url
+        :return self._url: resource url
         """
         scheme, netloc, path, params, query, fragment = urlparse(self._url)
 
@@ -304,53 +313,77 @@ class Request(object):
     def send(self):
         """Send request to self._url resource
 
-        Returns:
-        - `response` - :Response instance
+        :return: `Response` object
         """
 
         try:
-            opener, body_output, headers_output = self.build_opener(self._build_url())
+            opener = self.build_opener(self._build_url())
             opener.perform()
             # if close before getinfo, raises pycurl.error can't invote getinfo()
             # opener.close()
         except pycurl.error, e:
             raise CurlError(e[0], e[1])
         else:
-            self.response = Response(url=self._url, curl_opener=opener,
-                                     body_output=body_output,
-                                     headers_output=headers_output, request=self,
-                                     cookies=self._cookies)
+            self.response = self.make_response()
 
         return self.response
 
-    def build_opener(self, url):
+    def make_response(self):
+        """Make response from finished opener
+
+        :return response: :class:`Response` object
+        """
+        response = Response(url=self._url, curl_opener=self._opener,
+                            body_output=self.body_output,
+                            headers_output=self.headers_output, request=self,
+                            cookies=self._cookies)
+
+        return response
+
+    def setup_writers(self, opener, headers_writer, body_writer):
+        """Setup headers and body writers
+
+        :param opener: :class:`pycurl.Curl` object
+        :param headers_writer: `StringIO` object
+        :param body_writer: `StringIO` object
+        """
+        # Body and header writers
+        opener.setopt(pycurl.HEADERFUNCTION, headers_writer)
+        opener.setopt(pycurl.WRITEFUNCTION, body_writer)
+
+
+    @staticmethod
+    def clean_opener(opener):
+        """Reset opener options
+
+        :param opener: :class:`pycurl.Curl` object
+        :return opener: clean :`pycurl.Curl` object
+        """
+        opener.reset()
+        return opener
+
+
+    def build_opener(self, url, opener=None):
         """Compile pycurl.Curl instance
 
         Compile `pycurl.Curl` instance with given instance settings
         and return `pycurl.Curl` configured instance, StringIO instances
         of body_output and headers_output
 
-        Arguments:
-        - `url`: resource url
-
-        Returns:
-        - `opener`: `pycurl.Curl` configured instance
-        - `body_output`: StringIO object with response body
-        - `headers_output`: StringIO object with response headers
+        :param url: resource url
+        :return: an ``(opener, body_output, headers_output)`` tuple.
         """
         # http://curl.haxx.se/mail/curlpython-2005-06/0004.html
         # http://curl.haxx.se/mail/lib-2010-03/0114.html
-        opener = pycurl.Curl()
-        body_output = StringIO()
-        headers_output = StringIO()
+
+        opener = opener or pycurl.Curl()
+
+        opener = self.clean_opener(opener)
 
         logger.debug("Open url: %s" % url)
         opener.setopt(pycurl.URL, url)
         opener.setopt(pycurl.NOSIGNAL, 1)
 
-        # Body and header writers
-        opener.setopt(pycurl.HEADERFUNCTION, headers_output.write)
-        opener.setopt(pycurl.WRITEFUNCTION, body_output.write)
 
         if isinstance(self._auth, AuthManager):
             self._auth.setup_request(self)
@@ -387,7 +420,7 @@ class Request(object):
             opener.setopt(pycurl.DEBUGFUNCTION, self._debug_curl)
         elif self._debug_curl is True:
             opener.setopt(pycurl.VERBOSE, 1)
-            opener.setopt(pycurl.DEBUGFUNCTION, _debug_curl)
+            opener.setopt(pycurl.DEBUGFUNCTION, logger_debug)
         else:
             opener.setopt(pycurl.VERBOSE, 0)
 
@@ -531,7 +564,15 @@ class Request(object):
             for key, value in self._options:
                 opener.setopt(key, value)
 
-        return opener, body_output, headers_output
+
+        self.body_output = StringIO()
+        self.headers_output = StringIO()
+
+        self.setup_writers(opener, self.headers_output.write, self.body_output.write)
+
+        self._opener = opener
+
+        return opener
 
 
 class Response(object):
@@ -542,12 +583,12 @@ class Response(object):
                  request=None, cookies=None):
         """
         Arguments:
-        - `url`: resource url
-        - `curl_opener`: :pycurl.Curl instance
-        - `body_output`: :StringIO instance
-        - `headers_output`: :StringIO instance
-        - `request`: :Resource instance
-        - `cookies_jar`: :CookieJar instance
+        :param url: resource url
+        :param curl_opener: :class:`pycurl.Curl` object
+        :param body_output: :StringIO instance
+        :param headers_output: :StringIO instance
+        :param request: :class:`Request` instance
+        :param cookies_jar: :class:`CookieJar` instance
         """
 
         # Requested url
@@ -617,6 +658,10 @@ class Response(object):
         return self._response_info
 
     @property
+    def request(self):
+        return self._request
+
+    @property
     def url(self):
         if not self._url:
             self._get_curl_info()
@@ -652,6 +697,15 @@ class Response(object):
             else:
                 self._content = self._body_otput.getvalue()
         return self._content
+
+    @property
+    def json(self):
+        """Returns the json-encoded content of a response
+        """
+        try:
+            return json.loads(self.content)
+        except ValueError:
+            return None
 
     def _parse_headers_raw(self):
         """Parse response headers and save as instance vars
@@ -739,6 +793,8 @@ class Response(object):
         """Returns list of BaseCookie object
 
         All cookies in list are ``Cookie.Morsel`` instance
+
+        :return self._cookies: cookies list
         """
         if not self._cookies:
             self._parse_headers_raw()
@@ -747,23 +803,10 @@ class Response(object):
     @property
     def history(self):
         """Returns redirects history list
+
+        :return: list of `Response` objects
         """
         if not self._history:
             self._parse_headers_raw()
         return self._history
 
-
-def _debug_curl(debug_type, debug_msg):
-    """Handle debug messages
-
-    - `debug_type`: (int) debug output code
-    - `debug_msg`: (str) debug message
-    """
-    debug_types = ('I', '<', '>', '<', '>')
-    if debug_type == 0:
-        logger.debug('%s', debug_msg.strip())
-    elif debug_type in (1, 2):
-        for line in debug_msg.splitlines():
-            logger.debug('%s %s', debug_types[debug_type], line)
-    elif debug_type == 4:
-        logger.debug('%s %r', debug_types[debug_type], debug_msg)
