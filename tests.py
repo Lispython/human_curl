@@ -1061,8 +1061,8 @@ class AsyncTestCase(BaseTestCase):
         async_client = AsyncClient()
         data = self.request_params()
 
-        with self.assertRaises(InterfaceError):
-            async_client.add_handler(**data)
+
+        self.assertRaises(InterfaceError, async_client.add_handler, **data)
 
         data['success_callback'] = lambda **kwargs: kwargs
         data['fail_callback'] = lambda **kwargs: kwargs
