@@ -72,7 +72,6 @@ class AsyncClient(object):
         return self._default_user_agent
 
 
-
     def add_handler(self, **params):
         """Add request params to data queue
 
@@ -324,6 +323,13 @@ class AsyncClient(object):
         """ Close deascriptors after object delete
         """
         self.cleanup_pool()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        logger.debug((exc_type, exc_value, traceback))
+        self.start()
 
 
 def default_success_callback(response, async_client, opener, **kwargs):

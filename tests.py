@@ -1079,6 +1079,34 @@ class AsyncTestCase(BaseTestCase):
         self.assertNotEqual(opener, None)
 
 
+    def test_AsyncClient_contextmanager(self):
+        with AsyncClient(success_callback=self.success_callback,
+                         fail_callback=self.fail_callback) as async_client_global:
+
+            params = self.random_dict(10)
+            url = build_url("get")
+
+            self.assertEquals(async_client_global.get(url, params=params), async_client_global)
+            self.assertEquals(len(async_client_global._data_queue), 1)
+
+            # Test process_func
+            def process_func(num_processed, remaining, num_urls,
+                             success_len, error_len):
+                print("\nProcess {0} {1} {2} {3} {4}".format(num_processed, remaining, num_urls,
+                                                             success_len, error_len))
+                self.assertEquals(num_urls, 2)
+
+            def fail_callback(request, errno, errmsg, async_client, opener):
+                self.assertTrue(isinstance(request, Request))
+                self.assertTrue(isinstance(async_client, AsyncClient))
+                self.assertEquals(async_client, async_client_global)
+                self.assertEquals(errno, 6)
+                self.assertEquals(errmsg, "Couldn't resolve host '{0}'".format(request.url[7:]))
+            async_client_global.get("http://fwbefrubfbrfybghbfb4gbyvrv.com", params=params,
+                                    fail_callback=fail_callback)
+            self.assertEquals(len(async_client_global._data_queue), 2)
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(RequestsTestCase))
