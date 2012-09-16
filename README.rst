@@ -6,7 +6,7 @@ Curl requests for Humans
 human_curl allow you to send  **HEAD**, **GET**, **POST**, **PUT**,
 **OPTIONS**, and **DELETE** HTTP requests.
 
-.. image:: https://secure.travis-ci.org/lispython/human_curl.png?branch=master
+.. image:: https://secure.travis-ci.org/Lispython/human_curl.png
 	   :target: https://secure.travis-ci.org/lispython/human_curl
 
 Features
@@ -28,6 +28,7 @@ Features
 - Basic/Digest authentication
 - OAuth support!
 - Debug request and response headers
+- .netrc support
 
 
 Usage

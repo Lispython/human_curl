@@ -137,7 +137,7 @@ class Request(object):
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
                  max_redirects=5, proxy=None, auth=None, network_interface=None, use_gzip=None,
                  validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None,
-                 ip_v6=False, options=None, **kwargs):
+                 ip_v6=False, options=None, netrc=False, netrc_file=None, **kwargs):
         """A single HTTP / HTTPS request
 
         Arguments:
@@ -259,6 +259,9 @@ class Request(object):
         self.body_output = StringIO()
         self.headers_output = StringIO()
 
+        self._netrc = netrc
+        self._netrc_file = None
+
     def __repr__(self, ):
         # TODO: collect `Request` settings into representation string
         return "<%s: %s [ %s ]>" % (self.__class__.__name__, self._method, self._url)
@@ -351,6 +354,17 @@ class Request(object):
         opener.setopt(pycurl.HEADERFUNCTION, headers_writer)
         opener.setopt(pycurl.WRITEFUNCTION, body_writer)
 
+    def setup_netrc(self, opener):
+        """Setup netrc file
+
+        :paramt opener: :class:`pycurl.Curl` object
+        """
+        if self._netrc:
+            opener.setopt(pycurl.NETRC, 1)
+
+        if self._netrc_file and file_exists(self._netrc_file):
+            opener.setopt(pycurl.NETRC_FILE, self._netrc_file)
+
 
     @staticmethod
     def clean_opener(opener):
@@ -388,6 +402,8 @@ class Request(object):
         if isinstance(self._auth, AuthManager):
             self._auth.setup_request(self)
             self._auth.setup(opener)
+        elif self._netrc:
+            self.setup_netrc(opener)
         else:
             opener.unsetopt(pycurl.USERPWD)
 
