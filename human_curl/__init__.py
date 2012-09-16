@@ -25,12 +25,12 @@ Features:
     - Debug request and response headers
     - Multicurl support
 
-:copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: (c) 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
 __all__ = ('get', 'put', 'head', 'post', 'delete', 'request', 'options',
-           'Request', 'Response', 'get_version', 'AsyncClient', 'async')
+           'Request', 'Response', 'get_version', 'AsyncClient', 'async_client')
 __author__ = "Alex Lispython (alex@obout.ru)"
 __license__ = "BSD, see LICENSE for more details"
 __version_info__ = (0, 0, 5)
@@ -44,6 +44,4 @@ def get_version():
 from .methods import get, put, head, post, delete, request, options
 from .core import Request, Response
 from .exceptions import CurlError, InterfaceError, InvalidMethod, AuthError
-from .async_client import AsyncClient
-
-async = AsyncClient()
+from .async import AsyncClient, async_client

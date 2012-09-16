@@ -12,6 +12,7 @@ Features
 - Custom HTTP headers
 - Request data/params
 - Multiple file uploading
+- Async requests!
 - Cookies support (dict or CookieJar)
 - Redirection history
 - Proxy support (http, https, socks4/5)
@@ -112,13 +113,23 @@ Usage
     200
 
 
+**Async requests**
+
+    >>> from human_curl.async import AsyncClient
+    >>> async_client = AsyncClient(success_callback=lambda **kw: print kw,
+    ... fail_callback=lambda **kw: print kw)
+    >>> async_client.get('http://h.wrttn.me/get')
+    >>> async_client.get('http://httpbin.org/get',
+    ... success_callback=lambda **kw: print("success!"),
+    ... fail_callback=lambda **kw: print("fail!")
+    >>> async_client.start()
+
+
 
 TODO
 ----
 
-- async client
 - curl command generation?
-- OAuth
 
 
 INSTALLATION

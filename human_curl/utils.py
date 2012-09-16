@@ -6,7 +6,7 @@ human_curl.utils
 
 Utils module of cURL for Humans
 
-:copyright: Copyright 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: Copyright 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 
@@ -44,9 +44,9 @@ __all__ = ('decode_gzip', 'CaseInsensitiveDict', 'from_cookiejar', 'to_cookiejar
            'utf8', 'to_unicode', 'parse_authenticate_header', 'parse_authorization_header',
            'WWWAuthenticate', 'Authorization', 'parse_dict_header', 'generate_nonce',
            'generate_timestamp', 'generate_verifier', 'normalize_url', 'normalize_parameters',
-           'parse_qs', 'stdout_debug', 'dispatch_hook')
+           'parse_qs', 'stdout_debug', 'dispatch_hook', 'curry')
 
-logger = getLogger("curl_requests")
+logger = getLogger("human_curl.core")
 
 def url_escape(value):
     """Returns a valid URL-encoded version of the given value."""
@@ -535,6 +535,9 @@ def normalize_parameters(url, params=None):
 
 def stdout_debug(debug_type, debug_msg):
     """Print messages into stdout
+
+    - `debug_type`: (int) debug output code
+    - `debug_msg`: (str) debug message
     """
     debug_types = ('I', '<', '>', '<', '>')
     if debug_type == 0:
@@ -544,6 +547,23 @@ def stdout_debug(debug_type, debug_msg):
             print('%s %s' % (debug_types[debug_type], line))
     elif debug_type == 4:
         print('%s %r' % (debug_types[debug_type], debug_msg))
+
+
+def logger_debug(debug_type, debug_msg):
+    """Handle debug messages
+
+    - `debug_type`: (int) debug output code
+    - `debug_msg`: (str) debug message
+    """
+    debug_types = ('I', '<', '>', '<', '>')
+    if debug_type == 0:
+        logger.debug('%s', debug_msg.strip())
+    elif debug_type in (1, 2):
+        for line in debug_msg.splitlines():
+            logger.debug('%s %s', debug_types[debug_type], line)
+    elif debug_type == 4:
+        logger.debug('%s %r', debug_types[debug_type], debug_msg)
+
 
 
 def dispatch_hook(key, hooks, data):
@@ -557,3 +577,11 @@ def dispatch_hook(key, hooks, data):
         except Exception, e:
             logger.warn(str(e))
     return data
+
+
+def curry(fn, *cargs, **ckwargs):
+    def call_fn(*fargs, **fkwargs):
+        d = ckwargs.copy()
+        d.update(fkwargs)
+        return fn(*(cargs + fargs), **d)
+    return call_fn

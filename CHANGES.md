@@ -1,3 +1,9 @@
+# v0.0.5 (16-09-2012
+
+- Added AsyncClient!
+- Added json property to Response object
+
+
 # v0.0.4
 
 - Added hooks
@@ -9,14 +15,12 @@
 
 # v0.0.2
 
-Changes:
-
 - Added digest auth
 
 # v0.0.1 (31-08-2011)
 
-First version
-First test written 29-08-2011
+- First version
+- First test written 29-08-2011
 
 Changes:
 

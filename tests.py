@@ -2,11 +2,11 @@
 # -*- coding:  utf-8 -*-
 """
 human_curl.tests
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 Unittests for human_curl
 
-:copyright: (c) 2011 by Alexandr Lispython (alex@obout.ru).
+:copyright: (c) 2011 - 2012 by Alexandr Lispython (alex@obout.ru).
 :license: BSD, see LICENSE for more details.
 """
 from __future__ import with_statement
@@ -18,27 +18,27 @@ import cookielib
 from Cookie import Morsel
 import json
 import uuid
-from random import randint
+from random import randint, choice
+from string import ascii_letters, digits
 import logging
 from urlparse import urljoin
 import unittest
 import urllib
-from types import TupleType, StringTypes, ListType
+from types import TupleType, ListType, FunctionType, DictType
 from urllib import urlencode
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
+
 
 import human_curl as requests
-import human_curl.async_client as async
+from human_curl import async
 from human_curl import Request, Response
+from human_curl import AsyncClient
 from human_curl.auth import *
 from human_curl.utils import *
 
 from human_curl.exceptions import (CurlError, InterfaceError, InvalidMethod, AuthError)
 
-logger = logging.getLogger("human_curl")
+logger = logging.getLogger("human_curl.tests")
 
 TEST_METHODS = (
     ('get', requests.get),
@@ -47,9 +47,6 @@ TEST_METHODS = (
     ('delete', requests.delete),
     ('put', requests.put),
     ('options', requests.options))
-
-HTTP_TEST_URL = "http://h.wrttn.me"
-HTTPS_TEST_URL = "https://h.wrttn.me"
 
 # Use https://github.com/Lispython/httphq
 if 'HTTP_TEST_URL' not in os.environ:
@@ -60,7 +57,6 @@ if 'HTTPS_TEST_URL' not in os.environ:
 
 HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL')
 HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL')
-
 
 
 def build_url(*parts):
@@ -84,7 +80,28 @@ def stdout_debug(debug_type, debug_msg):
         print('%s %r' % (debug_types[debug_type], debug_msg))
 
 
-class RequestsTestCase(unittest.TestCase):
+def random_string(num=10):
+    return ''.join([choice(ascii_letters + digits) for x in xrange(num)])
+
+
+class BaseTestCase(unittest.TestCase):
+
+    @staticmethod
+    def random_string(num=10):
+        return random_string(10)
+
+    def random_dict(self, num=10):
+        return dict([(self.random_string(10), self.random_string(10))for x in xrange(10)])
+
+    def request_params(self):
+        data = self.random_dict(10)
+        data['url'] = build_url("get")
+        data['method'] = 'get'
+
+        return data
+
+
+class RequestsTestCase(BaseTestCase):
 
     def test_build_url(self):
         self.assertEquals(build_url("get"), HTTP_TEST_URL + "/" + "get")
@@ -361,7 +378,23 @@ class RequestsTestCase(unittest.TestCase):
         self.assertEquals(r2._status_code, 700)
 
 
-class ResponseTestCase(unittest.TestCase):
+    def test_json_response(self):
+        random_key = "key_" + uuid.uuid4().get_hex()[:10]
+        random_value1 = "value_" + uuid.uuid4().get_hex()
+        random_value2 = "value_" + uuid.uuid4().get_hex()
+        r = requests.get(build_url("get"),
+                         params={random_key: (random_value1, random_value2)})
+
+        self.assertEquals(build_url("get?%s" %
+                                    urlencode(((random_key, random_value1), (random_key, random_value2)))), r.url)
+
+        json_response = json.loads(r.content)
+        self.assertTrue(isinstance(r.json, (dict, DictType)))
+        self.assertEquals(json_response, r.json)
+        self.assertTrue(random_value1 in r.json['args'][random_key])
+        self.assertTrue(random_value2 in r.json['args'][random_key])
+
+class ResponseTestCase(BaseTestCase):
 
     def setUp(self):
         pass
@@ -370,7 +403,7 @@ class ResponseTestCase(unittest.TestCase):
         pass
 
 
-class RequestTestCase(unittest.TestCase):
+class RequestTestCase(BaseTestCase):
 
     def setUp(self):
         pass
@@ -379,7 +412,7 @@ class RequestTestCase(unittest.TestCase):
         pass
 
 
-class UtilsTestCase(unittest.TestCase):
+class UtilsTestCase(BaseTestCase):
 
     def test_case_insensitive_dict(self):
         test_data = {
@@ -512,7 +545,7 @@ class UtilsTestCase(unittest.TestCase):
                 assert False
 
 
-class AuthManagersTestCase(unittest.TestCase):
+class AuthManagersTestCase(BaseTestCase):
 
 
     def test_parse_dict_header(self):
@@ -933,12 +966,117 @@ class AuthManagersTestCase(unittest.TestCase):
 
 
 
-class AsyncTestCase(unittest.TestCase):
+class AsyncTestCase(BaseTestCase):
 
-    def test_methods(self):
 
-        logger.debug(async.get(build_url("get")))
-        self.assertTrue(isinstance(async.get(build_url("get")), Request))
+    def success_callback(self, async_client, opener, response, **kwargs):
+        self.assertTrue(isinstance(opener.request, Request))
+        self.assertTrue(isinstance(response, Response))
+        self.assertTrue(isinstance(async_client, AsyncClient))
+        self.assertTrue(async_client._default_user_agent in response.content)
+
+    def fail_callback(self, async_client, opener, errno, errmsg, **kwargs):
+        self.assertTrue(isinstance(async_client, AsyncClient))
+
+    def test_AsyncClient_core(self):
+        async_client = AsyncClient(size=20)
+
+        self.assertEquals(async_client._num_conn, 20)
+        self.assertEquals(async_client._remaining, 0)
+        self.assertEquals(async_client.success_callback, None)
+        self.assertEquals(async_client.fail_callback, None)
+        self.assertEquals(async_client._openers_pool, None)
+        self.assertEquals(async_client._data_queue, [])
+        self.assertEquals(async_client.connections_count, 0)
+
+        async_client.add_handler(url=build_url("/get"),
+                                 method="get",
+                                 params={"get1": "get1 value",
+                                         "get2": "get2 value"},
+                                 success_callback=self.success_callback,
+                                 fail_callback=self.fail_callback)
+        self.assertEquals(len(async_client._data_queue), 1)
+        self.assertTrue(isinstance(async_client._data_queue[0], dict))
+
+        params = self.random_dict(10)
+
+        async_client.get(url=build_url("/get"), params=params,
+                         success_callback=self.success_callback,
+                         fail_callback=self.fail_callback)
+        self.assertTrue(isinstance(async_client._data_queue[1], dict))
+        self.assertEquals(async_client._data_queue[1]['params'], params)
+        self.assertEquals(async_client.connections_count, 2)
+
+    def test_async_get(self):
+        async_client_global = AsyncClient(success_callback=self.success_callback,
+                                          fail_callback=self.fail_callback)
+
+        params = self.random_dict(10)
+        url = build_url("get")
+
+        self.assertEquals(async_client_global.get(url, params=params), async_client_global)
+        self.assertEquals(len(async_client_global._data_queue), 1)
+
+        # Test process_func
+        def process_func(num_processed, remaining, num_urls,
+                         success_len, error_len):
+            print("\nProcess {0} {1} {2} {3} {4}".format(num_processed, remaining, num_urls,
+                                                         success_len, error_len))
+            self.assertEquals(num_urls, 2)
+
+        def fail_callback(request, errno, errmsg, async_client, opener):
+            self.assertTrue(isinstance(request, Request))
+            self.assertTrue(isinstance(async_client, AsyncClient))
+            self.assertEquals(async_client, async_client_global)
+            self.assertEquals(errno, 6)
+            self.assertEquals(errmsg, "Couldn't resolve host '{0}'".format(request.url[7:]))
+        async_client_global.get("http://fwbefrubfbrfybghbfb4gbyvrv.com", params=params,
+                                fail_callback=fail_callback)
+        self.assertEquals(len(async_client_global._data_queue), 2)
+        async_client_global.start(process_func)
+
+
+    def test_setup_opener(self):
+        async_client = AsyncClient()
+
+        data = self.random_dict(10)
+        data['url'] = build_url("get")
+        data['method'] = 'get'
+        opener = async_client.get_opener()
+
+        self.assertEquals(getattr(opener, 'success_callback', None), None)
+        self.assertEquals(getattr(opener, 'fail_callback', None), None)
+        self.assertEquals(getattr(opener, 'request', None), None)
+
+        data['success_callback'] = lambda **kwargs: kwargs
+        data['fail_callback'] = lambda **kwargs: kwargs
+
+        async_client.configure_opener(opener, data)
+        self.assertTrue(isinstance(opener.request, Request))
+        self.assertTrue(isinstance(opener.success_callback, FunctionType))
+        self.assertTrue(isinstance(opener.fail_callback, FunctionType))
+
+
+    def test_add_handler(self):
+        async_client = AsyncClient()
+        data = self.request_params()
+
+        with self.assertRaises(InterfaceError):
+            async_client.add_handler(**data)
+
+        data['success_callback'] = lambda **kwargs: kwargs
+        data['fail_callback'] = lambda **kwargs: kwargs
+
+        async_client.add_handler(**data)
+        self.assertEquals(async_client._data_queue[0], data)
+        self.assertEquals(async_client._num_urls, 1)
+        self.assertEquals(async_client._remaining, 1)
+
+    def test_get_opener(self):
+        async_client = AsyncClient()
+        opener = async_client.get_opener()
+        self.assertEquals(opener.fp, None)
+        self.assertNotEqual(opener, None)
 
 
 def suite():
