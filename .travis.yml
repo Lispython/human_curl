@@ -16,4 +16,4 @@ install:
     - pip install -U pycurl
 
 script:
-    - make test
+    - make travis
