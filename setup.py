@@ -21,7 +21,7 @@ except:
 
 from setuptools import Command, setup
 
-__version__ = (0, 0, 5)
+__version__ = (0, 0, 6)
 
 
 try:
