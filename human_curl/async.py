@@ -195,7 +195,10 @@ class AsyncClient(object):
         opener.success_callback = None
         opener.fail_callback = None
         opener.request = None
-        opener.reset()
+
+        if getattr(opener, "dirty", False) is True:
+            opener.reset()
+
         # Maybe need delete cookies?
         return opener
 
@@ -227,7 +230,11 @@ class AsyncClient(object):
         call to multi.socket_action.
         """
         while True:
-            num_queued, success_list, error_list = self._openers_pool.info_read()
+            try:
+                num_queued, success_list, error_list = self._openers_pool.info_read()
+            except Exception, e:
+                logger.warn(e)
+                continue
 
             for opener in success_list:
                 opener.fp = None
@@ -237,6 +244,7 @@ class AsyncClient(object):
                 response = self.make_response(opener)
                 opener.success_callback(response=response,
                                         async_client=self, opener=opener)
+                opener.dirty = True
                 self._free_openers.append(opener)
 
             for opener, errno, errmsg in error_list:
@@ -246,6 +254,7 @@ class AsyncClient(object):
                 opener.fail_callback(errno=errno, errmsg=errmsg,
                                      async_client=self, opener=opener,
                                      request=opener.request)
+                opener.dirty = True
                 self._free_openers.append(opener)
 
 
