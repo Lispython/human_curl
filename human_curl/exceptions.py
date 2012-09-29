@@ -17,9 +17,8 @@ __all__ = ("HTTPError", "InvalidMethod", "CurlError", "InterfaceError")
 class HTTPError(Exception):
     """Exception for failed HTTP request
 
-    Attributes:
-
-    - `code`: HTTP error integer error code, e. g. 404
+    :param code: HTTP error integer error code, e. g. 404
+    :param message: error message string
     """
     def __init__(self, code, message=None):
         self.code = code
@@ -32,6 +31,9 @@ class InvalidMethod(Exception):
 
 class CurlError(Exception):
     """Exception raise when `pycurl.Curl` raise connection errors
+
+    :param code: HTTP error integer error code, e. g. 404
+    :param message: error message string
     """
     def __init__(self, code, message=None):
         self.code = code
@@ -42,7 +44,6 @@ class InterfaceError(Exception):
     """Raises when get not allowed parametr type
     or not allowed parameter
     """
-
 
 class AuthError(Exception):
     """Raised by auth manager

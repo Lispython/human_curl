@@ -392,7 +392,8 @@ class Request(object):
 
         opener = opener or pycurl.Curl()
 
-        opener = self.clean_opener(opener)
+        if getattr(opener, "dirty", True):
+            opener = self.clean_opener(opener)
 
         logger.debug("Open url: %s" % url)
         opener.setopt(pycurl.URL, url)

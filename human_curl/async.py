@@ -16,7 +16,7 @@ import pycurl
 # Lib imports
 from . import get_version
 from .core import Request
-from .exceptions import InterfaceError
+from .exceptions import InterfaceError, CurlError
 
 
 __all__ = ("AsyncClient", "map", "async_client", "get", "head", "post", "put", "options", "delete")
@@ -25,6 +25,7 @@ logger = getLogger('human_curl.async')
 
 DEFAULT_MAX_OPENERS = 1000
 DEFAULT_SLEEP_TIMEOUT = 2.0
+DEFAULT_INFO_READ_RETRIES_MAX = 10
 
 
 class AsyncClient(object):
@@ -36,7 +37,8 @@ class AsyncClient(object):
 
     def __init__(self, size=DEFAULT_MAX_OPENERS,
                  success_callback=None, fail_callback=None,
-                 sleep_timeout=DEFAULT_SLEEP_TIMEOUT, **kwargs):
+                 sleep_timeout=DEFAULT_SLEEP_TIMEOUT,
+                 info_read_retries_max=DEFAULT_INFO_READ_RETRIES_MAX, **kwargs):
         """Create `AsyncClient`
 
         :param size: openers count
@@ -61,6 +63,7 @@ class AsyncClient(object):
         self.responses = []
         self._default_user_agent = None
         self._default_params = kwargs
+        self._finished = False
 
 
     @property
@@ -121,6 +124,7 @@ class AsyncClient(object):
         opener = pycurl.Curl()
         opener.fp = None
         opener.setopt(pycurl.NOSIGNAL, 1)
+        opener.dirty = False
         return opener
 
     def perform_pool(self):
@@ -195,8 +199,10 @@ class AsyncClient(object):
         opener.fail_callback = None
         opener.request = None
 
-        if getattr(opener, "dirty", False) is True:
-            opener.reset()
+        ## if getattr(opener, "dirty", False) is True:
+        ##     # After appling this method curl raise error
+        ##     # Unable to fetch curl handle from curl object
+        ##     #opener.reset()
 
         # Maybe need delete cookies?
         return opener
@@ -233,7 +239,7 @@ class AsyncClient(object):
                 num_queued, success_list, error_list = self._openers_pool.info_read()
             except Exception, e:
                 logger.warn(e)
-                continue
+                raise CurlError(e[0], e[1])
 
             for opener in success_list:
                 opener.fp = None
@@ -243,7 +249,8 @@ class AsyncClient(object):
                 response = self.make_response(opener)
                 opener.success_callback(response=response,
                                         async_client=self, opener=opener)
-                opener.dirty = True
+                ## FIXME: after pycurl.MultiCurl reset error
+                ## opener.dirty = True
                 self._free_openers.append(opener)
 
             for opener, errno, errmsg in error_list:
@@ -253,7 +260,8 @@ class AsyncClient(object):
                 opener.fail_callback(errno=errno, errmsg=errmsg,
                                      async_client=self, opener=opener,
                                      request=opener.request)
-                opener.dirty = True
+                ## FIXME: after pycurl.MultiCurl reset error
+                ## opener.dirty = True
                 self._free_openers.append(opener)
 
 

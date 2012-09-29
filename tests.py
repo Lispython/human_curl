@@ -26,19 +26,31 @@ import unittest
 import urllib
 from types import TupleType, ListType, FunctionType, DictType
 from urllib import urlencode
-from StringIO import StringIO
-
 
 import human_curl as requests
-from human_curl import async
 from human_curl import Request, Response
 from human_curl import AsyncClient
 from human_curl.auth import *
 from human_curl.utils import *
 
-from human_curl.exceptions import (CurlError, InterfaceError, InvalidMethod, AuthError)
+from human_curl.exceptions import (CurlError, InterfaceError)
 
-logger = logging.getLogger("human_curl.tests")
+logger = logging.getLogger("human_curl.test")
+
+## async_logger = logging.getLogger("human_curl.async")
+## async_logger.setLevel(logging.DEBUG)
+
+## # Add the log message handler to the logger
+## # LOG_FILENAME = os.path.join(os.path.dirname(__file__), "debug.log")
+## # handler = logging.handlers.FileHandler(LOG_FILENAME)
+## handler = logging.StreamHandler()
+
+## formatter = logging.Formatter("%(levelname)s %(asctime)s %(module)s [%(lineno)d] %(process)d %(thread)d | %(message)s ")
+
+## handler.setFormatter(formatter)
+
+## async_logger.addHandler(handler)
+
 
 TEST_METHODS = (
     ('get', requests.get),
