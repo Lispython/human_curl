@@ -21,9 +21,6 @@ except:
 
 from setuptools import Command, setup
 
-from human_curl import get_version
-
-
 try:
     readme_content = open(os.path.join(os.path.abspath(
         os.path.dirname(__file__)), "README.rst")).read()
@@ -31,6 +28,7 @@ except Exception, e:
     print(e)
     readme_content = __doc__
 
+VERSION = "0.0.9"
 
 
 class run_audit(Command):
@@ -81,7 +79,7 @@ tests_require = [
 
 setup(
     name="human_curl",
-    version=get_version(),
+    version=VERSION,
     description="Simple cURL wrapper for Humans",
     long_description=readme_content,
     author="Alex Lispython",
