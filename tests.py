@@ -13,7 +13,7 @@ from __future__ import with_statement
 
 import os
 import time
-import pycurl
+import pycurl2 as pycurl
 import cookielib
 from Cookie import Morsel
 import json

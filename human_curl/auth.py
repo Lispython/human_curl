@@ -14,7 +14,11 @@ import binascii
 import hmac
 from types import StringTypes, ListType
 
-import pycurl
+try:
+    import pycurl2 as pycurl
+except ImportError:
+    import pycurl
+
 from urllib import urlencode
 
 import methods as hurl

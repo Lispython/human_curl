@@ -14,10 +14,12 @@ import zlib
 import time
 import urllib
 import urlparse
-import pycurl
+try:
+    import pycurl2 as pycurl
+except ImportError:
+    import pycurl
 import random
 from urllib2 import parse_http_list
-from urllib import quote_plus
 from logging import getLogger
 from Cookie import Morsel
 from string import capwords

@@ -2,7 +2,11 @@
 
 import cStringIO
 import sys
-import pycurl
+
+try:
+    import pycurl2 as pycurl
+except ImportError:
+    import pycurl
 
 import re
 def removewww(a):

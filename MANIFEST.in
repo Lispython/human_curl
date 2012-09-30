@@ -1,5 +1,7 @@
-include *.txt *.md *.rst Makefile
-recursive-include docs *.txt *.py *.rst *.md
+include *.txt *.md *.rst Makefile *.py
+recursive-include human_curl *.py
+recursive-exclude human_curl *.pyo *.pyc
+recursive-include docs *.txt *.py *.rst *.md *
 recursive-include docs *
 recursive-exclude docs *.pyc
 recursive-exclude docs *.pyo

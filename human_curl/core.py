@@ -23,7 +23,10 @@ from urlparse import urlparse, urljoin, urlunparse
 from types import (StringTypes, TupleType, DictType, NoneType,
                    ListType, FunctionType)
 
-import pycurl
+try:
+    import pycurl2 as pycurl
+except ImportError:
+    import pycurl
 from . import get_version
 from .compat import json
 from .auth import AuthManager, BasicAuth
@@ -281,7 +284,7 @@ class Request(object):
     def _build_url(self):
         """Build resource url
 
-        Parsing `self._urls`, add self._parms to query string if need
+        Parsing ``self._urls``, add ``self._parms`` to query string if need
 
         :return self._url: resource url
         """

@@ -21,7 +21,7 @@ except:
 
 from setuptools import Command, setup
 
-__version__ = (0, 0, 7)
+from human_curl import get_version
 
 
 try:
@@ -74,21 +74,25 @@ def run_tests():
     from tests import suite
     return suite()
 
+tests_require = [
+    'nose',
+    'unittest2',
+]
 
 setup(
     name="human_curl",
-    version=".".join(map(str, __version__)),
+    version=get_version(),
     description="Simple cURL wrapper for Humans",
     long_description=readme_content,
     author="Alex Lispython",
     author_email="alex@obout.ru",
-    maintainer = "Alexandr Lispython",
-    maintainer_email = "alex@obout.ru",
+    maintainer="Alexandr Lispython",
+    maintainer_email="alex@obout.ru",
     url="https://github.com/lispython/human_curl",
     packages=["human_curl"],
     install_requires=[
-        'pycurl',
-        ],
+        'pycurl2'],
+    tests_require=tests_require,
     license="BSD",
 #    test_suite="nose.collector",
     platforms = ['Linux', 'Mac'],
