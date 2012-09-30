@@ -1,6 +1,7 @@
 language: python
 
 python:
+    - "2.5"
     - "2.6"
     - "2.7"
 
@@ -13,7 +14,7 @@ branches:
 
 install:
     - pip install nose
-    - pip install -U pycurl
+    - pip install -U pycurl2
 
 script:
     - make travis
