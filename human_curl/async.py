@@ -11,7 +11,10 @@ Async module
 from logging import getLogger
 from types import FunctionType
 
-import pycurl
+try:
+    import pycurl2 as pycurl
+except ImportError:
+    import pycurl
 
 # Lib imports
 from . import get_version
