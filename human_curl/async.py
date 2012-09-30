@@ -199,10 +199,10 @@ class AsyncClient(object):
         opener.fail_callback = None
         opener.request = None
 
-        ## if getattr(opener, "dirty", False) is True:
-        ##     # After appling this method curl raise error
-        ##     # Unable to fetch curl handle from curl object
-        ##     #opener.reset()
+        if getattr(opener, "dirty", False) is True:
+            # After appling this method curl raise error
+            # Unable to fetch curl handle from curl object
+            opener.reset()
 
         # Maybe need delete cookies?
         return opener
