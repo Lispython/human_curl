@@ -38,7 +38,7 @@ Usage
 **Simple get request**
 
     >>> import human_curl as requests # python-requests.org compatibile
-    >>> # import human_curl as hurl # unfortunately hulr.it keep this name :-)
+    >>> # import human_curl as hurl # unfortunately hurl.it keeps this name :-)
     >>> r = requests.get('http://h.wrttn.me/basic-auth/test_username/test_password',
     ... auth=('test_username', 'test_password'))
     >>> r.status_code
