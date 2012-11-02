@@ -40,7 +40,7 @@ from StringIO import StringIO
 
 try:
     import platform
-    if platform.system() != 'windows':
+    if platform.system().lower() != 'windows':
         import signal
         signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except ImportError:
