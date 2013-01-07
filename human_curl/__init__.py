@@ -37,7 +37,7 @@ __build__ = 0x000010
 
 try:
     __version__ = __import__('pkg_resources') \
-        .get_distribution('sentry').version
+        .get_distribution('human_curl').version
 except Exception, e:
     __version__ = 'unknown'
 
