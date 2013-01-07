@@ -139,7 +139,7 @@ TODO
 INSTALLATION
 ------------
 
-To use human_curl  use pip or easy_install:
+To use human_curl use pip or easy_install:
 
 `pip install human_curl`
 

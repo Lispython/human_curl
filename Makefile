@@ -18,6 +18,7 @@ audit:
 
 release:
 	python setup.py sdist upload
+	python setup.py bdist_wininst upload
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +

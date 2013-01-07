@@ -104,5 +104,4 @@ setup(
         "Topic :: Software Development :: Libraries"
         ],
     cmdclass={'audit': run_audit},
-    test_suite = '__main__.run_tests'
-    )
+    test_suite = '__main__.run_tests')

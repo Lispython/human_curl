@@ -33,9 +33,19 @@ __all__ = ('get', 'put', 'head', 'post', 'delete', 'request', 'options',
            'Request', 'Response', 'get_version', 'AsyncClient', 'async_client')
 __author__ = "Alex Lispython (alex@obout.ru)"
 __license__ = "BSD, see LICENSE for more details"
-__version_info__ = (0, 1, 0)
 __build__ = 0x000010
-__version__ = ".".join(map(str, __version_info__))
+
+try:
+    __version__ = __import__('pkg_resources') \
+        .get_distribution('sentry').version
+except Exception, e:
+    __version__ = 'unknown'
+
+if __version__ == 'unknown':
+    __version_info__ = (0, 0, 0)
+else:
+    __version_info__ = __version__.split('.')
+
 __maintainer__ = "Alexandr Lispython (alex@obout.ru)"
 
 
