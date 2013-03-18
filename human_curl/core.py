@@ -746,7 +746,7 @@ class Response(object):
                 if not header:
                     continue
                 elif not header.startswith("HTTP"):
-		    field, value = map(lambda u: u.strip(), header.split(":", 1))
+                    field, value = map(lambda u: u.strip(), header.split(":", 1))
                     if field.startswith("Location"):
                         # maybe not good
                         if not value.startswith("http"):
