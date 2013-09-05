@@ -317,13 +317,13 @@ class AsyncClient(object):
         return self.method("get", url=url, **kwargs)
 
     def post(self, url, data='', **kwargs):
-        return self.method("post", **kwargs)
+        return self.method("post", url=url, **kwargs)
 
     def head(self, url, **kwargs):
         return self.method("head", url=url, **kwargs)
 
     def options(self, url, **kwargs):
-        return self.method("options", url, **kwargs)
+        return self.method("options", url=url, **kwargs)
 
     def put(self, url, **kwargs):
         return self.method("put", url=url, **kwargs)
