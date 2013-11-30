@@ -42,7 +42,9 @@ try:
     import platform
     if platform.system().lower() != 'windows':
         import signal
-        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+        from threading import current_thread
+        if current_thread().name == 'MainThread':
+            signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 except ImportError:
     pass
 
