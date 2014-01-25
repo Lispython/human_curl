@@ -16,9 +16,9 @@ shell:
 audit:
 	python setup.py autdit
 
-release:
-	python setup.py sdist upload
-	python setup.py bdist_wininst upload
+release: clean-pyc
+	git tag -f v$(version) && git push --tags
+	python setup.py sdist bdist_wininst upload
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
