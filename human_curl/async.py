@@ -317,7 +317,7 @@ class AsyncClient(object):
         return self.method("get", url=url, **kwargs)
 
     def post(self, url, data='', **kwargs):
-        return self.method("post", url=url, **kwargs)
+        return self.method("post", url=url, data=data, **kwargs)
 
     def head(self, url, **kwargs):
         return self.method("head", url=url, **kwargs)
