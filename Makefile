@@ -4,6 +4,8 @@ test:
 	python setup.py nosetests --stop --tests tests.py
 
 travis:
+	export TESTER_URL=http://$(HTTPHQ_HOST):$(HTTPHQ_PORT)/
+	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)&
 	python setup.py nosetests --tests tests.py
 
 coverage:

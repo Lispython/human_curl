@@ -4,14 +4,13 @@ python:
     - "2.6"
     - "2.7"
 
-env: TESTER_URL=http://h.wrttn.me/
-
-
-branches:
-    only:
-        - master
+env:
+  global:
+    - HTTPHQ_HOST=127.0.0.1
+    - HTTPHQ_PORT=8891
 
 install:
+    - pip install -U httphq
     - pip install nose
     - pip install -U pycurl2
 
