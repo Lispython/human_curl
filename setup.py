@@ -52,7 +52,7 @@ class run_audit(Command):
             print "Audit requires PyFlakes installed in your system."""
             sys.exit(-1)
 
-        dirs = ['curl_proxies_checker']
+        dirs = ['human_curl']
         # Add example directories
         for dir in []:
             dirs.append(os.path.join('examples', dir))
@@ -75,6 +75,7 @@ def run_tests():
 tests_require = [
     'nose',
     'unittest2',
+    'httphq'
 ]
 
 setup(
