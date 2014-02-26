@@ -233,7 +233,7 @@ class Request(object):
         else:
             raise ValueError("auth must be list, tuple or dict, not %s" % type(auth))
 
-        # forllow by location header field
+        # follow by location header field
         self._allow_redirects = allow_redirects
         self._max_redirects = max_redirects
 
@@ -552,7 +552,7 @@ class Request(object):
         if self._method in ("POST", "PUT"):
             if self._files is not None:
                 post_params = self._files
-                if isinstance(self._data, (TupleType, DictType)):
+                if isinstance(self._data, (TupleType, ListType, DictType)):
                     post_params.extend(data_wrapper(self._data))
                 opener.setopt(opener.HTTPPOST, post_params)
             else:
