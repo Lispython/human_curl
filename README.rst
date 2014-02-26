@@ -39,7 +39,7 @@ Usage
 
     >>> import human_curl as requests # python-requests.org compatibile
     >>> # import human_curl as hurl # unfortunately hurl.it keeps this name :-)
-    >>> r = requests.get('http://h.wrttn.me/basic-auth/test_username/test_password',
+    >>> r = hurl.get('http://h.wrttn.me/basic-auth/test_username/test_password',
     ... auth=('test_username', 'test_password'))
     >>> r.status_code
     200
@@ -48,7 +48,7 @@ Usage
 
 **Cookies and headers**
 
-    >>> import human_curl as requests # python-requests.org compatibile
+    >>> import human_curl as hurl # python-requests.org compatibile
     >>> r = hurl.get("http://h.wrttn.me/cookies/set/ajfwjlknefjrrf/fkjwnfklrnjge")
     >>> r.cookies
         {'ajfwjlknefjrrf': 'fkjwnfklrnjge'}
@@ -67,8 +67,8 @@ Usage
 
 **Send files and variables**
 
-    >>> import human_curl as requests
-    >>> r = requests.post('http://h.wrttn.me/post', files=(('file_1', '/tmp/testfile1.txt'),
+    >>> import human_curl as hurl
+    >>> r = hurl.post('http://h.wrttn.me/post', files=(('file_1', '/tmp/testfile1.txt'),
     ... ('file2', open('/tmp/testfile2.txt'))), data={'var_name': 'var_value'})
     >>> r.status_code
     201
@@ -76,8 +76,8 @@ Usage
 
 **Redirects**
 
-    >>> import human_curl as requests
-    >>> r = requests.get('http://h.wrttn.me/redirect/4', allow_redirects=True)
+    >>> import human_curl as hurl
+    >>> r = hurl.get('http://h.wrttn.me/redirect/4', allow_redirects=True)
     >>> r.status_code
     200
     >>> print(r.history)
