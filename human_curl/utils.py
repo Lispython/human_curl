@@ -282,7 +282,7 @@ def data_wrapper(data):
 def make_curl_post_files(data):
     """Convert parameters dict, list or tuple to cURL style tuple
     """
-    if isinstance(data, TupleType):
+    if isinstance(data, (TupleType, ListType)):
         iterator = data
     elif isinstance(data, DictType):
         iterator = data.iteritems()
