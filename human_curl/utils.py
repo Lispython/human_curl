@@ -587,3 +587,19 @@ def curry(fn, *cargs, **ckwargs):
         d.update(fkwargs)
         return fn(*(cargs + fargs), **d)
     return call_fn
+
+
+def urlnoencode(query):
+    """Convert a sequence of two-element tuples or dictionary into a URL query string without url-encoding.
+    """
+    l = []
+    arg = "%s=%s"
+
+    if hasattr(query, "items"):
+        # mapping objects
+        query = query.items()
+
+    for k, v in query:
+        l.append(arg % (k, v))
+
+    return "&".join(l)
