@@ -300,7 +300,6 @@ class RequestsTestCase(BaseTestCase):
         self.assertEquals(json_response['username'], username)
         self.assertEquals(json_response['auth-type'], 'basic')
 
-
     def test_digest_auth(self):
         username = uuid.uuid4().get_hex()
         password =  uuid.uuid4().get_hex()
@@ -313,7 +312,6 @@ class RequestsTestCase(BaseTestCase):
         self.assertEquals(json_response['password'], password)
         self.assertEquals(json_response['username'], username)
         self.assertEquals(json_response['auth-type'], 'digest')
-
 
     def test_auth_denied(self):
         username = "hacker_username"
@@ -389,7 +387,6 @@ class RequestsTestCase(BaseTestCase):
         r2 = requests.get("http://h.wrttn.me/get", hooks={'response_hook': response_hook})
         self.assertEquals(r2._status_code, 700)
 
-
     def test_json_response(self):
         random_key = "key_" + uuid.uuid4().get_hex()[:10]
         random_value1 = "value_" + uuid.uuid4().get_hex()
@@ -405,6 +402,24 @@ class RequestsTestCase(BaseTestCase):
         self.assertEquals(json_response, r.json)
         self.assertTrue(random_value1 in r.json['args'][random_key])
         self.assertTrue(random_value2 in r.json['args'][random_key])
+
+    def test_get_encode_query(self):
+        params = {'q': 'value with space and @'}
+        key, value = 'email', 'user@domain.com'
+        response = requests.get(build_url("get""?%s=%s" % (key, value)), params=params)
+        self.assertEquals(response.status_code, 200)
+        self.assertEqual("{0}/get?email=user%40domain.com&q=value+with+space+and+%40".format(HTTP_TEST_URL), response.request._url)
+        args = json.loads(response.content)['args']
+        self.assertEquals(args['q'][0], params['q'])
+        self.assertEquals(args[key][0], value)
+
+    def test_get_no_encode_query(self):
+        params = {'q': 'value with space and @'}
+        key, value = 'email', 'user@domain.com'
+        response = requests.get(build_url("get""?%s=%s" % (key, value)), params=params, encode_query=False)
+        self.assertEquals(response.status_code, 502)
+        self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
+
 
 class ResponseTestCase(BaseTestCase):
 
@@ -1046,7 +1061,6 @@ class AsyncTestCase(BaseTestCase):
                                 fail_callback=fail_callback)
         self.assertEquals(len(async_client_global._data_queue), 2)
         async_client_global.start(process_func)
-
 
     def test_setup_opener(self):
         async_client = AsyncClient()

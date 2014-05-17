@@ -12,14 +12,13 @@ Heart of human_curl library
 """
 
 import time
-import urllib
 from os.path import exists as file_exists
 from logging import getLogger
 from re import compile as re_compile
 from string import capwords
-from urllib import urlencode
+from urllib import urlencode, quote_plus
 from cookielib import CookieJar
-from urlparse import urlparse, urljoin, urlunparse
+from urlparse import urlparse, urljoin, urlunparse, parse_qsl
 from types import (StringTypes, TupleType, DictType, NoneType,
                    ListType, FunctionType)
 
@@ -33,7 +32,7 @@ from .auth import AuthManager, BasicAuth
 from .exceptions import (InvalidMethod, CurlError, InterfaceError)
 from .utils import (decode_gzip, CaseInsensitiveDict, to_cookiejar,
                     morsel_to_cookie, data_wrapper, make_curl_post_files,
-                    to_unicode, logger_debug)
+                    to_unicode, logger_debug, urlnoencode)
 
 
 from StringIO import StringIO
@@ -142,7 +141,7 @@ class Request(object):
                  files=None, timeout=None, connection_timeout=None, allow_redirects=False,
                  max_redirects=5, proxy=None, auth=None, network_interface=None, use_gzip=None,
                  validate_cert=False, ca_certs=None, cert=None, debug=False, user_agent=None,
-                 ip_v6=False, options=None, netrc=False, netrc_file=None, **kwargs):
+                 ip_v6=False, options=None, netrc=False, netrc_file=None, encode_query=None, **kwargs):
         """A single HTTP / HTTPS request
 
         Arguments:
@@ -267,6 +266,8 @@ class Request(object):
         self._netrc = netrc
         self._netrc_file = None
 
+        self._encode_query = encode_query
+
     def __repr__(self, ):
         # TODO: collect `Request` settings into representation string
         return "<%s: %s [ %s ]>" % (self.__class__.__name__, self._method, self._url)
@@ -286,7 +287,7 @@ class Request(object):
     def _build_url(self):
         """Build resource url
 
-        Parsing ``self._urls``, add ``self._parms`` to query string if need
+        Parsing ``self._url``, add ``self._params`` to query string if need
 
         :return self._url: resource url
         """
@@ -300,20 +301,26 @@ class Request(object):
         elif not scheme:
             scheme = "http"
 
+        tmp = []
         if self._params is not None:
-            tmp = []
             for param, value in self._params:
                 if isinstance(value, TupleType):
                     for i in value:
                         tmp.append((param, i))
                 elif isinstance(value, StringTypes):
                     tmp.append((param, value))
-            q = urlencode(tmp)
-            if not query:
-                query = q
-            else:
-                query = "%s&%s" % (query, q)
-            del tmp
+
+        if tmp:
+            tmp = parse_qsl(query) + tmp
+        else:
+            tmp = parse_qsl(query)
+
+        if self._encode_query:
+            query = urlencode(tmp)
+        else:
+            query = urlnoencode(tmp)
+
+        del tmp
 
         self._url = urlunparse([scheme, netloc, path, params, query, fragment])
         return self._url
@@ -520,8 +527,8 @@ class Request(object):
                 ##     name = name.encode("utf-8")
                 ## if isinstance(value, unicode):
                 ##     value = value.encode("utf-8")
-                name = urllib.quote_plus(name)
-                value = urllib.quote_plus(value)
+                name = quote_plus(name)
+                value = quote_plus(value)
                 chunks.append('%s=%s;' % (name, value))
             if chunks:
                 opener.setopt(pycurl.COOKIE, ''.join(chunks))
