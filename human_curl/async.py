@@ -40,6 +40,7 @@ class AsyncClient(object):
 
     def __init__(self, size=DEFAULT_MAX_OPENERS,
                  success_callback=None, fail_callback=None,
+                 process_func=None,
                  sleep_timeout=DEFAULT_SLEEP_TIMEOUT,
                  info_read_retries_max=DEFAULT_INFO_READ_RETRIES_MAX, **kwargs):
         """Create `AsyncClient`
@@ -61,7 +62,7 @@ class AsyncClient(object):
         self._num_urls = 0
         self._sleep_timeout = sleep_timeout
         self.num_processed = 0
-        self._process_func = None
+        self._process_func = process_func
         self._free_openers = []
         self.responses = []
         self._default_user_agent = None
