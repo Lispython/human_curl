@@ -18,6 +18,7 @@ from re import compile as re_compile
 from string import capwords
 from urllib import urlencode, quote_plus
 from cookielib import CookieJar
+from itertools import chain
 from urlparse import urlparse, urljoin, urlunparse, parse_qsl
 from types import (StringTypes, TupleType, DictType, NoneType,
                    ListType, FunctionType)
@@ -323,6 +324,7 @@ class Request(object):
         del tmp
 
         self._url = urlunparse([scheme, netloc, path, params, query, fragment])
+
         return self._url
 
     def send(self):
@@ -352,7 +354,7 @@ class Request(object):
                             body_output=self.body_output,
                             headers_output=self.headers_output, request=self,
                             cookies=self._cookies)
-
+        response.parse_cookies()
         return response
 
     def setup_writers(self, opener, headers_writer, body_writer):
@@ -753,8 +755,6 @@ class Response(object):
     def _parse_headers_raw(self):
         """Parse response headers and save as instance vars
         """
-        from Cookie import SimpleCookie, CookieError
-
         def parse_header_block(raw_block):
             r"""Parse headers block
 
@@ -804,10 +804,23 @@ class Response(object):
         if not self._history:
             self._history.append(self.url)
 
+
+    def parse_cookies(self):
+        from Cookie import SimpleCookie, CookieError
+
+        if not self._headers_history:
+            self._parse_headers_raw()
+
         # Get cookies from endpoint
         cookies = []
-        for key, value in last_header[1:]:
-            if key.startswith("Set-Cookie"):
+        for header in chain(*self._headers_history):
+            if len(header) > 2:
+                continue
+
+            key, value = header[0], header[1]
+
+            if key.lower().startswith("set-cookie"):
+
                 try:
                     cookie = SimpleCookie()
                     cookie.load(value)
@@ -820,6 +833,7 @@ class Response(object):
                 except CookieError, e:
                     logger.warn(e)
         self._cookies = dict([(cookie.key, cookie.value) for cookie in cookies])
+        return self._cookies
 
     @property
     def headers(self):
@@ -838,7 +852,7 @@ class Response(object):
         :return self._cookies: cookies list
         """
         if not self._cookies:
-            self._parse_headers_raw()
+            self.parse_cookies()
         return self._cookies
 
     @property
