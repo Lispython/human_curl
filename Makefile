@@ -14,10 +14,10 @@ test:
 
 run_httphq:
 	export HTTP_TEST_URL=http://$(HTTPHQ_HOST):$(HTTPHQ_PORT)/
-	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)
+	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)&
 
 
-travis: run_httphq
+travis:
 	python setup.py nosetests --tests tests.py
 
 coverage:
