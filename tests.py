@@ -64,6 +64,7 @@ TEST_METHODS = (
 HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL', 'http://h.wrttn.me')
 HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL', 'https://h.wrttn.me')
 
+print("Use {0} as test server".format(HTTP_TEST_URL))
 
 def build_url(*parts):
     return urljoin(HTTP_TEST_URL, "/".join(parts))
