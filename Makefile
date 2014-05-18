@@ -5,6 +5,7 @@ test:
 
 travis:
 	export TESTER_URL=http://$(HTTPHQ_HOST):$(HTTPHQ_PORT)/
+	export HTTP_TEST_URL=$(TESTER_URL)
 	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)&
 	python setup.py nosetests --tests tests.py
 
