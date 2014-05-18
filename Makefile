@@ -3,9 +3,13 @@ all: clean-pyc test
 test:
 	python setup.py nosetests --stop --tests tests.py
 
-travis:
-	export TESTER_URL=http://$(HTTPHQ_HOST):$(HTTPHQ_PORT)/
+
+run_httphq:
+	export HTTP_TEST_URL=http://$(HTTPHQ_HOST):$(HTTPHQ_PORT)/
 	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)&
+
+
+travis: run_httphq
 	python setup.py nosetests --tests tests.py
 
 coverage:
