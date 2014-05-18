@@ -61,14 +61,8 @@ TEST_METHODS = (
     ('options', requests.options))
 
 # Use https://github.com/Lispython/httphq
-if 'HTTP_TEST_URL' not in os.environ:
-    os.environ['HTTP_TEST_URL'] = 'http://h.wrttn.me'
-
-if 'HTTPS_TEST_URL' not in os.environ:
-    os.environ['HTTPS_TEST_URL'] = 'https://h.wrttn.me'
-
-HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL')
-HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL')
+HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL', 'http://h.wrttn.me')
+HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL', 'https://h.wrttn.me')
 
 
 def build_url(*parts):
@@ -357,7 +351,9 @@ class RequestsTestCase(BaseTestCase):
 
     def test_gzip(self):
         r = requests.get(build_url("gzip"), use_gzip=True)
+
         self.assertEquals(r.headers['Content-Encoding'], 'gzip')
+
         json_response = json.loads(r.content)
         self.assertEquals(json_response['gzipped'], True)
 
