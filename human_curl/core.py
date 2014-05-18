@@ -665,7 +665,9 @@ class Response(object):
         self._get_curl_info()
 
         # not good call methods in __init__
-        self._parse_headers_raw()
+        # it's really very BAD
+        # DO NOT UNCOMMENT
+        # self._parse_headers_raw()
 
 
     def __repr__(self):
@@ -736,6 +738,18 @@ class Response(object):
         except ValueError:
             return None
 
+    @staticmethod
+    def _split_headers_blocks(raw_headers):
+        i = 0
+        blocks = []
+        for item in raw_headers.strip().split("\r\n"):
+            if item.startswith("HTTP"):
+                blocks.append([item])
+                i = len(blocks) - 1
+            elif item:
+                blocks[i].append(item)
+        return blocks
+
     def _parse_headers_raw(self):
         """Parse response headers and save as instance vars
         """
@@ -751,7 +765,7 @@ class Response(object):
             - `headers_list`:
             """
             block_headers = []
-            for header in raw_block.strip().split("\r\n"):
+            for header in raw_block:
                 if not header:
                     continue
                 elif not header.startswith("HTTP"):
@@ -780,13 +794,11 @@ class Response(object):
 
         raw_headers = self._headers_output.getvalue()
 
-        headers_blocks = raw_headers.strip().split("\r\n\r\n")
-        for raw_block in headers_blocks:
+        for raw_block in self._split_headers_blocks(raw_headers.strip().split("\r\n")):
             block = parse_header_block(raw_block)
-
             self._headers_history.append(block)
 
-        last_header = self._headers_history[len(self._headers_history)-1]
+        last_header = self._headers_history[-1]
         self._headers = CaseInsensitiveDict(last_header[1:])
 
         if not self._history:
@@ -838,4 +850,3 @@ class Response(object):
         if not self._history:
             self._parse_headers_raw()
         return self._history
-
