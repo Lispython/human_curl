@@ -8,6 +8,7 @@ env:
   global:
     - HTTPHQ_HOST=127.0.0.1
     - HTTPHQ_PORT=8891
+    - HTTP_TEST_URL=http://127.0.0.1:8891
 
 install:
     - pip install -U httphq

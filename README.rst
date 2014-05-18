@@ -151,7 +151,7 @@ or
 CONTRIBUTE
 ----------
 
-Fork https://github.com/Lispython/human_curl/ , create commit and pull request.
+Fork https://github.com/Lispython/human_curl/ , create commit and pull request to ``develop``.
 
 
 SEE ALSO

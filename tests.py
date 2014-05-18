@@ -64,6 +64,7 @@ TEST_METHODS = (
 HTTP_TEST_URL = os.environ.get('HTTP_TEST_URL', 'http://h.wrttn.me')
 HTTPS_TEST_URL = os.environ.get('HTTPS_TEST_URL', 'https://h.wrttn.me')
 
+
 print("Use {0} as test server".format(HTTP_TEST_URL))
 
 def build_url(*parts):
@@ -254,16 +255,19 @@ class RequestsTestCase(BaseTestCase):
         cookies_jar = cookielib.CookieJar()
 
         r1 = requests.get(build_url("cookies", "set", random_key, random_value),
-                     cookies=cookies_jar)
+                     cookies=cookies_jar, debug=stdout_debug)
+
         self.assertEquals(r1.cookies[random_key], random_value)
-        requests.get(build_url("cookies", "set", random_key2, random_value2),
-                     cookies=cookies_jar)
+        rtmp = requests.get(build_url("cookies", "set", random_key2, random_value2),
+                            cookies=cookies_jar, debug=stdout_debug)
+
         for cookie in cookies_jar:
             if cookie.name == random_key:
                 self.assertEquals(cookie.value, random_value)
 
-        r3 = requests.get(build_url('cookies'), cookies=cookies_jar)
+        r3 = requests.get(build_url('cookies'), cookies=cookies_jar, debug=stdout_debug)
         json_response = json.loads(r3.content)
+
         for k, v in cookies:
             self.assertEquals(json_response[k], v)
 
@@ -376,12 +380,12 @@ class RequestsTestCase(BaseTestCase):
             r._status_code = 700
             return r
 
-        r1 = requests.get("http://h.wrttn.me/get", hooks={'pre_request': pre_hook,
-                                                          'post_request': post_hook})
+        r1 = requests.get(build_url("get"), hooks={'pre_request': pre_hook,
+                                                   'post_request': post_hook})
         self.assertEquals(r1._request.pre_hook, True)
         self.assertEquals(r1._request.post_hook, True)
 
-        r2 = requests.get("http://h.wrttn.me/get", hooks={'response_hook': response_hook})
+        r2 = requests.get(build_url("get"), hooks={'response_hook': response_hook})
         self.assertEquals(r2._status_code, 700)
 
     def test_json_response(self):
@@ -413,9 +417,15 @@ class RequestsTestCase(BaseTestCase):
     def test_get_no_encode_query(self):
         params = {'q': 'value with space and @'}
         key, value = 'email', 'user@domain.com'
-        response = requests.get(build_url("get""?%s=%s" % (key, value)), params=params, encode_query=False)
-        self.assertEquals(response.status_code, 502)
-        self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
+
+        # Invalid by HTTP spec
+        try:
+            response = requests.get(build_url("get""?%s=%s" % (key, value)), params=params, encode_query=False)
+        except CurlError, e:
+            self.assertEqual(e.code, 52)
+        else:
+            self.assertEquals(response.status_code, 502)
+            self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
 
 
 class ResponseTestCase(BaseTestCase):
@@ -799,17 +809,17 @@ class AuthManagersTestCase(BaseTestCase):
 
         verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
 
-        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
-                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+        request_token_url = build_url("oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret))
 
 
-        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
-        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+        authorize_url = build_url("oauth/1.0/authorize/%s" % verifier)
+        access_token_url = build_url("oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
                            (consumer_key, consumer_secret,
                             tmp_token_key, tmp_token_secret,
-                            verifier, token_key, token_secret)
+                            verifier, token_key, token_secret))
 
-        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+        protected_resource = build_url("oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret))
 
         r = Request("GET", protected_resource,
                     debug=stdout_debug
@@ -878,17 +888,17 @@ class AuthManagersTestCase(BaseTestCase):
 
         verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
 
-        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
-                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+        request_token_url = build_url("oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret))
 
 
-        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
-        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+        authorize_url = build_url("oauth/1.0/authorize/%s" % verifier)
+        access_token_url = build_url("oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
                            (consumer_key, consumer_secret,
                             tmp_token_key, tmp_token_secret,
-                            verifier, token_key, token_secret)
+                            verifier, token_key, token_secret))
 
-        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+        protected_resource = build_url("oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret))
 
         r = Request("GET", protected_resource,
                     debug=stdout_debug,
@@ -957,17 +967,17 @@ class AuthManagersTestCase(BaseTestCase):
 
         verifier = ''.join(map(str, [randint(1, 40) for x in xrange(7)]))
 
-        request_token_url = "http://h.wrttn.me/oauth/1.0/request_token/%s/%s/%s/%s" % \
-                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret)
+        request_token_url = build_url("oauth/1.0/request_token/%s/%s/%s/%s" % \
+                             (consumer_key, consumer_secret, tmp_token_key, tmp_token_secret))
 
 
-        authorize_url = "http://h.wrttn.me/oauth/1.0/authorize/%s" % verifier
-        access_token_url = "http://h.wrttn.me/oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
+        authorize_url = build_url("oauth/1.0/authorize/%s" % verifier)
+        access_token_url = build_url("oauth/1.0/access_token/%s/%s/%s/%s/%s/%s/%s" % \
                            (consumer_key, consumer_secret,
                             tmp_token_key, tmp_token_secret,
-                            verifier, token_key, token_secret)
+                            verifier, token_key, token_secret))
 
-        protected_resource = "http://h.wrttn.me/oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret)
+        protected_resource = build_url("oauth/1.0/protected_resource/%s/%s" % (consumer_secret, token_secret))
 
 
         consumer = OAuthConsumer(consumer_key, consumer_secret)
