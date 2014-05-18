@@ -17,7 +17,7 @@ run_httphq:
 	httphq server start --port=$(HTTPHQ_PORT) --host=$(HTTPHQ_HOST)&
 
 
-travis:
+travis: run_httphq
 	python setup.py nosetests --tests tests.py
 
 coverage:
