@@ -794,7 +794,7 @@ class Response(object):
 
         raw_headers = self._headers_output.getvalue()
 
-        for raw_block in self._split_headers_blocks(raw_headers.strip().split("\r\n")):
+        for raw_block in self._split_headers_blocks(raw_headers):
             block = parse_header_block(raw_block)
             self._headers_history.append(block)
 
