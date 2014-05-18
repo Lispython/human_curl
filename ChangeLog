@@ -3,6 +3,10 @@ human_curl Changelog
 
 # v0.1.4 (17-05-2014)
 ---------------------
+- Fixed Response __init__ ans headers parsings
+
+# v0.1.4 (17-05-2014)
+---------------------
 - Updated async client
 
 
