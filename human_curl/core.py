@@ -354,7 +354,10 @@ class Request(object):
                             body_output=self.body_output,
                             headers_output=self.headers_output, request=self,
                             cookies=self._cookies)
-        response.parse_cookies()
+        try:
+            response.parse_cookies()
+        except Exception, e:
+            logger.error(e, exc_info=True)
         return response
 
     def setup_writers(self, opener, headers_writer, body_writer):

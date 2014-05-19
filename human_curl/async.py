@@ -185,7 +185,7 @@ class AsyncClient(object):
         data = mixed_data
 
         request = Request(**data)
-        request.build_opener(data['url'], opener)
+        request.build_opener(request.url, opener)
 
         # Reset opener settings to defaults
         opener.request = request
