@@ -1,6 +1,11 @@
 human_curl Changelog
 ====================
 
+# v0.1.8 (19-05-2014)
+---------------------
+- Fixed async opener configurator.
+
+
 # v0.1.7 (18-05-2014)
 ---------------------
 - Fixed cookies. Fixed tests.
