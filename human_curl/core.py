@@ -311,14 +311,24 @@ class Request(object):
                     tmp.append((param, value))
 
         if tmp:
-            tmp = parse_qsl(query) + tmp
+            tmp = parse_qsl(query, keep_blank_values=True) + tmp
         else:
-            tmp = parse_qsl(query)
+            try:
+                tmp = parse_qsl(query, keep_blank_values=True, strict_parsing=True)
+            except ValueError:
+                tmp = query
+
+        if isinstance(tmp, str):
+            encode = quote_plus
+            noencode = lambda result: result
+        else:
+            encode = urlencode
+            noencode = urlnoencode
 
         if self._encode_query:
-            query = urlencode(tmp)
+            query = encode(tmp)
         else:
-            query = urlnoencode(tmp)
+            query = noencode(tmp)
 
         del tmp
 
