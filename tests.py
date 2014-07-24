@@ -427,6 +427,26 @@ class RequestsTestCase(BaseTestCase):
             self.assertEquals(response.status_code, 502)
             self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
 
+    def test_request_key_with_empty_value(self):
+        key = "key"
+        value = ""
+        url = build_url("get""?%s=%s" % (key, value))
+        response = requests.get(url)
+        self.assertEqual(url, response.request.url)
+
+    def test_request_key_no_equal(self):
+        key = "key+"
+        url = build_url("get""?%s" % key)
+        response = requests.get(url)
+        self.assertEqual("{0}/get?key%2B".format(HTTP_TEST_URL), response.request.url)
+
+    def test_request_key_no_equal_and_params(self):
+        key = "key"
+        params = {"a": "b"}
+        url = build_url("get""?%s" % key)
+        response = requests.get(url, params=params)
+        self.assertEqual(url + "=" + "&a=b", response.request.url)
+
 
 class ResponseTestCase(BaseTestCase):
 
