@@ -598,11 +598,14 @@ class Request(object):
                         opener.setopt(pycurl.POST, True)
                         opener.setopt(pycurl.POSTFIELDSIZE, len(self._data))
                 elif isinstance(self._data, (TupleType, ListType, DictType)):
-                    # use multipart/form-data;
-                    opener.setopt(opener.HTTPPOST, data_wrapper(self._data))
-
-                    # use postfields to send vars as application/x-www-form-urlencoded
-                    # opener.setopt(pycurl.POSTFIELDS, encoded_data)
+                    headers = dict(self._headers or [])
+                    if 'multipart' in headers.get('Content-Type', ''):
+                        # use multipart/form-data;
+                        opener.setopt(opener.HTTPPOST, data_wrapper(self._data))
+                    else:
+                        # use postfields to send vars as application/x-www-form-urlencoded
+                        encoded_data = urlencode(self._data, doseq=True)
+                        opener.setopt(pycurl.POSTFIELDS, encoded_data)
 
         if isinstance(self._options, (TupleType, ListType)):
             for key, value in self._options:
