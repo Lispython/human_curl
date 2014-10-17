@@ -312,14 +312,24 @@ class Request(object):
                     tmp.append((param, value))
 
         if tmp:
-            tmp = parse_qsl(query) + tmp
+            tmp = parse_qsl(query, keep_blank_values=True) + tmp
         else:
-            tmp = parse_qsl(query)
+            try:
+                tmp = parse_qsl(query, keep_blank_values=True, strict_parsing=True)
+            except ValueError:
+                tmp = query
+
+        if isinstance(tmp, str):
+            encode = quote_plus
+            noencode = lambda result: result
+        else:
+            encode = urlencode
+            noencode = urlnoencode
 
         if self._encode_query:
-            query = urlencode(tmp)
+            query = encode(tmp)
         else:
-            query = urlnoencode(tmp)
+            query = noencode(tmp)
 
         del tmp
 
@@ -588,11 +598,14 @@ class Request(object):
                         opener.setopt(pycurl.POST, True)
                         opener.setopt(pycurl.POSTFIELDSIZE, len(self._data))
                 elif isinstance(self._data, (TupleType, ListType, DictType)):
-                    # use multipart/form-data;
-                    opener.setopt(opener.HTTPPOST, data_wrapper(self._data))
-
-                    # use postfields to send vars as application/x-www-form-urlencoded
-                    # opener.setopt(pycurl.POSTFIELDS, encoded_data)
+                    headers = dict(self._headers or [])
+                    if 'multipart' in headers.get('Content-Type', ''):
+                        # use multipart/form-data;
+                        opener.setopt(opener.HTTPPOST, data_wrapper(self._data))
+                    else:
+                        # use postfields to send vars as application/x-www-form-urlencoded
+                        encoded_data = urlencode(self._data, doseq=True)
+                        opener.setopt(pycurl.POSTFIELDS, encoded_data)
 
         if isinstance(self._options, (TupleType, ListType)):
             for key, value in self._options:

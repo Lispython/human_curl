@@ -345,6 +345,19 @@ class RequestsTestCase(BaseTestCase):
         self.assertTrue(random_value1 in json_response['args'][random_key])
         self.assertTrue(random_value2 in json_response['args'][random_key])
 
+    def test_multipart_post_data(self):
+        random_key = "key_" + uuid.uuid4().get_hex()[:10]
+        random_value = "value_" + uuid.uuid4().get_hex()
+        r = requests.post(
+            build_url("post"),
+            data={random_key: random_value},
+            headers={'Content-Type': 'multipart/form-data'})
+
+        json_response = json.loads(r.content)
+        content_type = json_response['headers']['Content-Type']
+        self.assertTrue(random_value in json_response['args'][random_key])
+        self.assertTrue('multipart/form-data; boundary=-' in content_type)
+
     def test_redirect(self):
         r = requests.get(build_url("redirect", '3'), allow_redirects=True)
         self.assertEquals(r.status_code, 200)
@@ -426,6 +439,26 @@ class RequestsTestCase(BaseTestCase):
         else:
             self.assertEquals(response.status_code, 502)
             self.assertEqual("{0}/get?email=user@domain.com&q=value with space and @".format(HTTP_TEST_URL), response.request._url)
+
+    def test_request_key_with_empty_value(self):
+        key = "key"
+        value = ""
+        url = build_url("get""?%s=%s" % (key, value))
+        response = requests.get(url)
+        self.assertEqual(url, response.request.url)
+
+    def test_request_key_no_equal(self):
+        key = "key+"
+        url = build_url("get""?%s" % key)
+        response = requests.get(url)
+        self.assertEqual("{0}/get?key%2B".format(HTTP_TEST_URL), response.request.url)
+
+    def test_request_key_no_equal_and_params(self):
+        key = "key"
+        params = {"a": "b"}
+        url = build_url("get""?%s" % key)
+        response = requests.get(url, params=params)
+        self.assertEqual(url + "=" + "&a=b", response.request.url)
 
 
 class ResponseTestCase(BaseTestCase):
