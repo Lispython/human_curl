@@ -345,6 +345,19 @@ class RequestsTestCase(BaseTestCase):
         self.assertTrue(random_value1 in json_response['args'][random_key])
         self.assertTrue(random_value2 in json_response['args'][random_key])
 
+    def test_multipart_post_data(self):
+        random_key = "key_" + uuid.uuid4().get_hex()[:10]
+        random_value = "value_" + uuid.uuid4().get_hex()
+        r = requests.post(
+            build_url("post"),
+            data={random_key: random_value},
+            headers={'Content-Type': 'multipart/form-data'})
+
+        json_response = json.loads(r.content)
+        content_type = json_response['headers']['Content-Type']
+        self.assertTrue(random_value in json_response['args'][random_key])
+        self.assertTrue('multipart/form-data; boundary=-' in content_type)
+
     def test_redirect(self):
         r = requests.get(build_url("redirect", '3'), allow_redirects=True)
         self.assertEquals(r.status_code, 200)
