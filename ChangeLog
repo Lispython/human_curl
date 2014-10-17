@@ -1,6 +1,11 @@
 human_curl Changelog
 ====================
 
+# v0.1.9 (17-10-2014)
+---------------------
+- Use multipart only if it is present in headers.
+
+
 # v0.1.8 (19-05-2014)
 ---------------------
 - Fixed async opener configurator.
