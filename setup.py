@@ -28,7 +28,7 @@ except Exception, e:
     print(e)
     readme_content = __doc__
 
-VERSION = "0.1.9"
+VERSION = "0.2.0"
 
 
 class run_audit(Command):
@@ -90,7 +90,7 @@ setup(
     url="https://github.com/lispython/human_curl",
     packages=["human_curl"],
     install_requires=[
-        'pycurl2'],
+        'pycurl==7.43.0'],
     tests_require=tests_require,
     license="BSD",
 #    test_suite="nose.collector",

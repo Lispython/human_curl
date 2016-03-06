@@ -33,7 +33,7 @@ __all__ = ('get', 'put', 'head', 'post', 'delete', 'request', 'options',
            'Request', 'Response', 'get_version', 'AsyncClient', 'async_client')
 __author__ = "Alex Lispython (alex@obout.ru)"
 __license__ = "BSD, see LICENSE for more details"
-__build__ = 0x000012
+__build__ = 0x000020
 
 try:
     __version__ = __import__('pkg_resources') \

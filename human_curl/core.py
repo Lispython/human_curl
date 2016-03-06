@@ -27,6 +27,7 @@ try:
     import pycurl2 as pycurl
 except ImportError:
     import pycurl
+
 from . import get_version
 from .compat import json
 from .auth import AuthManager, BasicAuth
